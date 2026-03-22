@@ -45,3 +45,26 @@ modalSobre.addEventListener('click', (e) => {
     document.body.style.overflow = '';
   }
 });
+import { supabase } from './supabase.js'
+
+// Verifica sessão e atualiza navbar
+const btnApoie = document.querySelector('.nav-apoie')
+
+async function verificarSessao() {
+  const { data: { session } } = await supabase.auth.getSession()
+
+  if (session) {
+    btnApoie.textContent = 'Sair'
+    btnApoie.addEventListener('click', async () => {
+      await supabase.auth.signOut()
+      window.location.reload()
+    })
+  } else {
+    btnApoie.textContent = 'Login'
+    btnApoie.addEventListener('click', () => {
+      window.location.href = 'login.html'
+    })
+  }
+}
+
+verificarSessao()
