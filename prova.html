@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Afyados · Prova</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- NAVBAR DA PROVA -->
+  <nav class="prova-nav">
+    <button class="nav-btn" id="btn-inicio" onclick="confirmarSaida()">← Início</button>
+    <div id="prova-titulo" class="prova-nav-titulo">SOI 1 · 2023.1</div>
+    <div class="prova-timer" id="timer">--:--</div>
+  </nav>
+
+  <!-- BARRA DE PROGRESSO -->
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+
+  <!-- NAVEGAÇÃO POR QUESTÕES -->
+  <div class="questao-nav" id="questao-nav"></div>
+
+  <!-- ÁREA DA QUESTÃO -->
+  <main class="prova-main">
+    <div class="prova-card" id="prova-card">
+      <div class="loading-text">Carregando prova...</div>
+    </div>
+  </main>
+
+  <!-- RODAPÉ DE NAVEGAÇÃO -->
+  <footer class="prova-footer">
+    <button class="btn-nav" id="btn-anterior">← Anterior</button>
+    <button class="btn-finalizar" id="btn-finalizar">Finalizar Prova</button>
+    <button class="btn-nav" id="btn-proxima">Próxima →</button>
+  </footer>
+
+  <!-- MODAL CONFIGURAÇÃO -->
+  <div class="modal-overlay active" id="modal-config">
+    <div class="modal">
+      <div class="modal-title-bar">CONFIGURAR PROVA</div>
+      <div class="modal-subject" id="config-titulo">SOI 1</div>
+
+      <div class="config-opcoes">
+        <div class="sobre-label">QUANDO MOSTRAR GABARITO?</div>
+        <div class="config-grid">
+          <button class="config-btn active" id="cfg-apos-responder" onclick="selecionarModo('apos')">
+            <span>⚡</span>
+            <div>
+              <div class="config-btn-title">Após responder</div>
+              <div class="config-btn-desc">Ver gabarito logo após cada questão</div>
+            </div>
+          </button>
+          <button class="config-btn" id="cfg-no-final" onclick="selecionarModo('final')">
+            <span>🏁</span>
+            <div>
+              <div class="config-btn-title">Apenas no final</div>
+              <div class="config-btn-desc">Ver resultado ao terminar a prova</div>
+            </div>
+          </button>
+        </div>
+
+        <div class="config-toggle-row">
+          <div>
+            <div class="config-toggle-label">Usar timer</div>
+            <div class="config-toggle-desc">Tempo limitado por questão</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="cfg-timer" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div id="timer-config">
+          <div class="config-toggle-label" style="margin-bottom:8px">Tempo total (minutos)</div>
+          <div class="timer-slider-row">
+            <span id="timer-valor">100</span> min
+            <input type="range" id="cfg-tempo" min="10" max="180" value="100" oninput="document.getElementById('timer-valor').textContent=this.value">
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-iniciar" style="margin-top:24px">INICIAR PROVA →</button>
+    </div>
+  </div>
+
+  <!-- MODAL RESULTADO -->
+  <div class="modal-overlay" id="modal-resultado">
+    <div class="modal">
+      <div class="modal-title-bar">RESULTADO</div>
+      <div class="resultado-score" id="resultado-score">0/0</div>
+      <div class="resultado-percent" id="resultado-percent">0%</div>
+      <div class="resultado-msg" id="resultado-msg"></div>
+      <div class="resultado-grid" id="resultado-grid"></div>
+      <button class="btn-primary" onclick="window.location.href='index.html'" style="margin-top:24px">← Voltar ao início</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/prova.js"></script>
+</body>
+</html>
