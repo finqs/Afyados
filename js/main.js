@@ -34,7 +34,7 @@ function closeModal() {
 // MODAL SOBRE
 const modalSobre = document.getElementById('modal-sobre')
 const modalSobreClose = document.getElementById('modal-sobre-close')
-const btnSobre = document.querySelector('.nav-btn')
+const btnSobre = document.getElementById('btn-perfil') || document.querySelector('.nav-btn')
 
 btnSobre.addEventListener('click', () => {
   modalSobre.classList.add('active')
@@ -104,4 +104,11 @@ async function carregarProvas(materia, periodo) {
     <div style="font-size:14px;margin-bottom:16px;color:var(--text-muted)">Escolha a prova:</div>
     ${lista}
   `
+}
+// Link perfil
+const btnPerfil = document.getElementById('btn-perfil')
+if (btnPerfil) {
+  btnPerfil.addEventListener('click', () => {
+    window.location.href = 'perfil.html'
+  })
 }

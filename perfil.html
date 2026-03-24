@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Afyados · Perfil</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="index.html" class="nav-btn">← Início</a>
+    <div class="logo">Afyados</div>
+    <button class="nav-btn nav-apoie" id="btn-sair">Sair</button>
+  </nav>
+
+  <main class="perfil-main">
+
+    <!-- HEADER DO PERFIL -->
+    <div class="perfil-header">
+      <div class="perfil-avatar" id="perfil-avatar">?</div>
+      <div>
+        <div class="perfil-nome" id="perfil-nome">Carregando...</div>
+        <div class="perfil-email" id="perfil-email"></div>
+      </div>
+    </div>
+
+    <!-- CARDS DE ESTATÍSTICAS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-valor" id="stat-total">--</div>
+        <div class="stat-label">Questões respondidas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-valor accent" id="stat-acertos">--%</div>
+        <div class="stat-label">Taxa de acertos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-valor" id="stat-provas">--</div>
+        <div class="stat-label">Provas realizadas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-valor" id="stat-materias">--</div>
+        <div class="stat-label">Matérias estudadas</div>
+      </div>
+    </div>
+
+    <!-- GRÁFICO DE DESEMPENHO POR MATÉRIA -->
+    <div class="perfil-card">
+      <div class="sobre-label">DESEMPENHO POR MATÉRIA</div>
+      <div class="chart-container">
+        <canvas id="chart-materias"></canvas>
+      </div>
+    </div>
+
+    <!-- PROVAS REALIZADAS -->
+    <div class="perfil-card">
+      <div class="sobre-label">HISTÓRICO DE PROVAS</div>
+      <div id="historico-lista" style="margin-top:16px">
+        <div class="loading-text">Carregando...</div>
+      </div>
+    </div>
+
+    <!-- ACERTOS POR MATÉRIA -->
+    <div class="perfil-card">
+      <div class="sobre-label">ACERTOS POR MATÉRIA</div>
+      <div id="materias-lista" style="margin-top:16px"></div>
+    </div>
+
+  </main>
+
+  <script type="module" src="js/perfil.js"></script>
+</body>
+</html>
