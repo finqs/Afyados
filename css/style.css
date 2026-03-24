@@ -559,3 +559,123 @@ body {
   text-align: center;
   min-height: 20px;
 }
+/* ADMIN */
+.admin-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.admin-card {
+  background: var(--surface);
+  border: 1px solid rgba(45, 126, 247, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.admin-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.admin-status {
+  font-size: 14px;
+  color: var(--accent);
+  min-height: 20px;
+}
+
+.questao-card {
+  background: var(--surface);
+  border: 1px solid rgba(45, 126, 247, 0.08);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.questao-numero {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+.questao-enunciado {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.alternativas-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alternativa-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #8a9bb5;
+}
+
+.alternativa-letra {
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 20px;
+}
+
+.questao-gabarito {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4ade80;
+}
+
+.questao-comentario {
+  font-size: 13px;
+  color: #8a9bb5;
+  line-height: 1.6;
+  border-left: 2px solid var(--accent-border);
+  padding-left: 12px;
+}
+
+.btn-salvar-prova {
+  background: #4ade80;
+  color: #000;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.btn-salvar-prova:hover {
+  background: #22c55e;
+  transform: translateY(-1px);
+}
+textarea.input-field {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
