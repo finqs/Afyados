@@ -6,8 +6,8 @@ const adminStatus = document.getElementById('admin-status')
 const questoesContainer = document.getElementById('questoes-container')
 
 let questoesExtraidas = []
+let respostaBrutaIA = ''
 
-// MODO IA (Gemini)
 btnExtrair.addEventListener('click', async () => {
   const { materia, periodo, ano, semestre, valido } = getDadosProva()
   if (!valido) return
@@ -24,15 +24,20 @@ btnExtrair.addEventListener('click', async () => {
     return
   }
 
-  setStatus('🤖 Enviando PDF para o Gemini...', 'info')
   btnExtrair.disabled = true
+  setStatus('Enviando PDF para o Gemini...', 'info')
 
-  const file = pdfInput.files[0]
-  const base64 = await fileToBase64(file)
+  try {
+    const file = pdfInput.files[0]
+    const base64 = await fileToBase64(file)
 
-  const prompt = `Extraia TODAS as questões desta prova de medicina e retorne APENAS um JSON válido, sem texto antes ou depois, sem markdown, sem backticks.
+    const prompt = `
+Extraia TODAS as questões de múltipla escolha desta prova de medicina e retorne APENAS um JSON válido.
+Não escreva texto antes ou depois.
+Não use markdown.
+Não use backticks.
 
-O formato deve ser exatamente este:
+Formato esperado:
 [
   {
     "numero": 1,
@@ -41,52 +46,86 @@ O formato deve ser exatamente este:
     "alternativa_b": "texto da alternativa B",
     "alternativa_c": "texto da alternativa C",
     "alternativa_d": "texto da alternativa D",
+    "alternativa_e": "texto da alternativa E se existir, senão string vazia",
     "gabarito": "A",
     "comentario": "explicação do gabarito se disponível"
   }
 ]
 
 Regras:
-- Inclua o enunciado completo com todas as informações
-- O gabarito deve ser apenas a letra: A, B, C ou D
-- Se não houver comentário, deixe o campo vazio ""
-- Extraia todas as questões sem exceção`
+- Inclua apenas questões de múltipla escolha
+- Ignore questões discursivas
+- Extraia todas as questões sem exceção
+- Inclua o enunciado completo
+- Preserve o texto das alternativas
+- Se a questão não tiver alternativa E, use ""
+- O gabarito deve ser somente uma letra: A, B, C, D ou E
+- Se não houver comentário, use ""
+- Retorne somente um array JSON válido
+`.trim()
 
-  try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inline_data: { mime_type: 'application/pdf', data: base64 } },
-              { text: prompt }
-            ]
-          }]
+          contents: [
+            {
+              parts: [
+                {
+                  inline_data: {
+                    mime_type: 'application/pdf',
+                    data: base64
+                  }
+                },
+                { text: prompt }
+              ]
+            }
+          ]
         })
       }
     )
 
     const data = await response.json()
-    console.log('Resposta Gemini:', JSON.stringify(data))
-    const texto = data.candidates[0].content.parts[0].text.trim()
-    const jsonLimpo = texto.replace(/```json|```/g, '').trim()
-    questoesExtraidas = JSON.parse(jsonLimpo)
+    console.log('Resposta Gemini:', data)
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || 'Erro na API do Gemini.')
+    }
+
+    const texto =
+      data?.candidates?.[0]?.content?.parts
+        ?.map(part => part.text || '')
+        .join('\n')
+        .trim() || ''
+
+    if (!texto) {
+      throw new Error('A IA não retornou texto utilizável.')
+    }
+
+    respostaBrutaIA = texto
+
+    const jsonLimpo = extractFirstJsonArray(texto)
+    const parsed = JSON.parse(jsonLimpo)
+    const normalizadas = normalizeQuestoes(parsed)
+
+    if (!normalizadas.length) {
+      throw new Error('Nenhuma questão válida foi encontrada.')
+    }
+
+    questoesExtraidas = normalizadas
 
     setStatus(`✅ ${questoesExtraidas.length} questões extraídas com sucesso!`, 'sucesso')
     renderQuestoes(questoesExtraidas, materia, periodo, ano, semestre)
-
   } catch (err) {
     console.error(err)
-    setStatus('❌ Erro ao extrair questões. Verifique a chave e tente novamente.', 'erro')
+    setStatus(`❌ Erro ao extrair questões: ${err.message}`, 'erro')
+  } finally {
+    btnExtrair.disabled = false
   }
-
-  btnExtrair.disabled = false
 })
 
-// MODO MANUAL (colar JSON)
 btnColarJson.addEventListener('click', () => {
   const { materia, periodo, ano, semestre, valido } = getDadosProva()
   if (!valido) return
@@ -98,11 +137,21 @@ btnColarJson.addEventListener('click', () => {
   }
 
   try {
-    questoesExtraidas = JSON.parse(jsonTexto)
+    const parsed = JSON.parse(jsonTexto)
+    const normalizadas = normalizeQuestoes(parsed)
+
+    if (!normalizadas.length) {
+      throw new Error('Nenhuma questão válida foi encontrada no JSON.')
+    }
+
+    questoesExtraidas = normalizadas
+    respostaBrutaIA = jsonTexto
+
     setStatus(`✅ ${questoesExtraidas.length} questões carregadas com sucesso!`, 'sucesso')
     renderQuestoes(questoesExtraidas, materia, periodo, ano, semestre)
   } catch (err) {
-    setStatus('❌ JSON inválido. Verifique o formato.', 'erro')
+    console.error(err)
+    setStatus(`❌ JSON inválido: ${err.message}`, 'erro')
   }
 })
 
@@ -122,7 +171,12 @@ function getDadosProva() {
 
 function setStatus(msg, tipo) {
   adminStatus.textContent = msg
-  adminStatus.style.color = tipo === 'erro' ? '#f87171' : tipo === 'sucesso' ? '#4ade80' : 'var(--accent)'
+  adminStatus.style.color =
+    tipo === 'erro'
+      ? '#f87171'
+      : tipo === 'sucesso'
+      ? '#4ade80'
+      : 'var(--accent)'
 }
 
 function renderQuestoes(questoes, materia, periodo, ano, semestre) {
@@ -130,71 +184,185 @@ function renderQuestoes(questoes, materia, periodo, ano, semestre) {
 
   const wrapper = document.createElement('div')
   wrapper.className = 'admin-card'
+
   wrapper.innerHTML = `
-    <div class="sobre-label">${questoes.length} QUESTÕES · ${materia} · ${ano}.${semestre}</div>
-    <div style="display:flex;flex-direction:column;gap:16px;margin-top:20px">
-      ${questoes.map(q => `
-        <div class="questao-card">
-          <div class="questao-numero">QUESTÃO ${q.numero}</div>
-          <div class="questao-enunciado">${q.enunciado}</div>
-          <div class="alternativas-grid">
-            <div class="alternativa-item"><span class="alternativa-letra">A)</span> ${q.alternativa_a}</div>
-            <div class="alternativa-item"><span class="alternativa-letra">B)</span> ${q.alternativa_b}</div>
-            <div class="alternativa-item"><span class="alternativa-letra">C)</span> ${q.alternativa_c}</div>
-            <div class="alternativa-item"><span class="alternativa-letra">D)</span> ${q.alternativa_d}</div>
-          </div>
-          <div class="questao-gabarito">✓ Gabarito: ${q.gabarito}</div>
-          ${q.comentario ? `<div class="questao-comentario">${q.comentario}</div>` : ''}
+    <h3>${questoes.length} QUESTÕES · ${escapeHtml(materia)} · ${escapeHtml(ano)}.${escapeHtml(semestre)}</h3>
+    ${questoes
+      .map(
+        q => `
+        <div class="questao-admin-item" style="margin-bottom: 1.5rem; padding: 1rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;">
+          <h4>QUESTÃO ${q.numero}</h4>
+          <p>${escapeHtml(q.enunciado)}</p>
+          <p><strong>A)</strong> ${escapeHtml(q.alternativa_a)}</p>
+          <p><strong>B)</strong> ${escapeHtml(q.alternativa_b)}</p>
+          <p><strong>C)</strong> ${escapeHtml(q.alternativa_c)}</p>
+          <p><strong>D)</strong> ${escapeHtml(q.alternativa_d)}</p>
+          ${
+            q.alternativa_e
+              ? `<p><strong>E)</strong> ${escapeHtml(q.alternativa_e)}</p>`
+              : ''
+          }
+          <p><strong>✓ Gabarito:</strong> ${escapeHtml(q.gabarito)}</p>
+          ${
+            q.comentario
+              ? `<div style="margin-top: .75rem;"><strong>Comentário:</strong><br>${escapeHtml(q.comentario)}</div>`
+              : ''
+          }
         </div>
-      `).join('')}
-    </div>
-    <button class="btn-salvar-prova" id="btn-salvar">💾 Salvar prova no banco de dados</button>
+      `
+      )
+      .join('')}
+    <button id="btn-salvar">Salvar prova no banco de dados</button>
   `
+
   questoesContainer.appendChild(wrapper)
-  document.getElementById('btn-salvar').addEventListener('click', () => salvarProva(materia, periodo, ano, semestre))
+
+  const btnSalvar = document.getElementById('btn-salvar')
+  btnSalvar.addEventListener('click', () => salvarProva(materia, periodo, ano, semestre))
 }
 
 async function salvarProva(materia, periodo, ano, semestre) {
+  if (!questoesExtraidas.length) {
+    alert('Nenhuma questão válida para salvar.')
+    return
+  }
+
   const btnSalvar = document.getElementById('btn-salvar')
   btnSalvar.textContent = 'Salvando...'
   btnSalvar.disabled = true
 
-  const { data: prova, error: erroProva } = await supabase
-    .from('provas')
-    .insert({ materia, periodo: parseInt(periodo), ano: parseInt(ano), semestre: parseInt(semestre) })
-    .select()
-    .single()
+  try {
+    const { data: prova, error: erroProva } = await supabase
+      .from('provas')
+      .insert({
+        materia,
+        periodo: parseInt(periodo, 10),
+        ano: parseInt(ano, 10),
+        semestre: parseInt(semestre, 10)
+        // Se depois você criar colunas extras, pode incluir:
+        // resposta_bruta_ia: respostaBrutaIA
+      })
+      .select()
+      .single()
 
-  if (erroProva) {
-    alert('Erro ao salvar prova: ' + erroProva.message)
+    if (erroProva) {
+      throw new Error(`Erro ao salvar prova: ${erroProva.message}`)
+    }
+
+    const questoesParaSalvar = questoesExtraidas.map(q => ({
+      prova_id: prova.id,
+      numero: q.numero,
+      enunciado: q.enunciado,
+      alternativa_a: q.alternativa_a,
+      alternativa_b: q.alternativa_b,
+      alternativa_c: q.alternativa_c,
+      alternativa_d: q.alternativa_d,
+      alternativa_e: q.alternativa_e || '',
+      gabarito: q.gabarito,
+      comentario: q.comentario || ''
+    }))
+
+    const { error: erroQuestoes } = await supabase
+      .from('questoes')
+      .insert(questoesParaSalvar)
+
+    if (erroQuestoes) {
+      throw new Error(`Erro ao salvar questões: ${erroQuestoes.message}`)
+    }
+
+    btnSalvar.textContent = '✅ Prova salva com sucesso!'
+    btnSalvar.style.background = '#4ade80'
+    setStatus('✅ Prova e questões salvas com sucesso!', 'sucesso')
+  } catch (err) {
+    console.error(err)
+    alert(err.message)
+    btnSalvar.textContent = 'Salvar prova no banco de dados'
     btnSalvar.disabled = false
-    return
+  }
+}
+
+function normalizeQuestoes(input) {
+  if (!Array.isArray(input)) {
+    throw new Error('O JSON precisa ser um array de questões.')
   }
 
-  const questoesParaSalvar = questoesExtraidas.map(q => ({
-    prova_id: prova.id,
-    numero: q.numero,
-    enunciado: q.enunciado,
-    alternativa_a: q.alternativa_a,
-    alternativa_b: q.alternativa_b,
-    alternativa_c: q.alternativa_c,
-    alternativa_d: q.alternativa_d,
-    gabarito: q.gabarito,
-    comentario: q.comentario || ''
-  }))
+  const normalizadas = input
+    .map((q, index) => normalizeQuestao(q, index))
+    .filter(Boolean)
 
-  const { error: erroQuestoes } = await supabase
-    .from('questoes')
-    .insert(questoesParaSalvar)
-
-  if (erroQuestoes) {
-    alert('Erro ao salvar questões: ' + erroQuestoes.message)
-    btnSalvar.disabled = false
-    return
+  if (!normalizadas.length) {
+    throw new Error('Nenhuma questão válida foi encontrada após a normalização.')
   }
 
-  btnSalvar.textContent = '✅ Prova salva com sucesso!'
-  btnSalvar.style.background = '#4ade80'
+  return normalizadas
+}
+
+function normalizeQuestao(q, index) {
+  if (!q || typeof q !== 'object') return null
+
+  const numero = parseInt(q.numero, 10)
+  const enunciado = cleanText(q.enunciado)
+  const alternativa_a = cleanText(q.alternativa_a)
+  const alternativa_b = cleanText(q.alternativa_b)
+  const alternativa_c = cleanText(q.alternativa_c)
+  const alternativa_d = cleanText(q.alternativa_d)
+  const alternativa_e = cleanText(q.alternativa_e)
+  const comentario = cleanText(q.comentario)
+
+  let gabarito = cleanText(q.gabarito).toUpperCase()
+  gabarito = gabarito.replace(/[^A-E]/g, '').charAt(0)
+
+  if (!numero || !enunciado || !alternativa_a || !alternativa_b || !alternativa_c || !alternativa_d) {
+    console.warn(`Questão ignorada por campos obrigatórios ausentes no índice ${index}:`, q)
+    return null
+  }
+
+  if (!gabarito || !['A', 'B', 'C', 'D', 'E'].includes(gabarito)) {
+    gabarito = ''
+  }
+
+  if (gabarito === 'E' && !alternativa_e) {
+    console.warn(`Questão ${numero} tem gabarito E, mas não possui alternativa E.`)
+  }
+
+  return {
+    numero,
+    enunciado,
+    alternativa_a,
+    alternativa_b,
+    alternativa_c,
+    alternativa_d,
+    alternativa_e,
+    gabarito,
+    comentario
+  }
+}
+
+function extractFirstJsonArray(text) {
+  const semMarkdown = text.replace(/```json|```/gi, '').trim()
+
+  const start = semMarkdown.indexOf('[')
+  const end = semMarkdown.lastIndexOf(']')
+
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error('Não foi possível localizar um array JSON na resposta.')
+  }
+
+  return semMarkdown.slice(start, end + 1)
+}
+
+function cleanText(value) {
+  if (value === null || value === undefined) return ''
+  return String(value).replace(/\s+/g, ' ').trim()
+}
+
+function escapeHtml(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }
 
 function fileToBase64(file) {
