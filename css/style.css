@@ -61,7 +61,7 @@ html.light .navbar { background: rgba(240,242,248,0.9); }
 
 .logo b { color: var(--accent); font-weight: 800; }
 
-.nav-right { display: flex; align-items: center; gap: 10px; }
+.nav-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
 .nav-btn {
   background: transparent;
@@ -516,8 +516,8 @@ html.light .cld { opacity: 1; }
 .auth-error { font-size: 13px; color: #f87171; text-align: center; min-height: 20px; }
 
 /* PROVA */
-.prova-nav { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; background: rgba(8,12,16,0.95); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-.prova-nav-titulo { font-size: 15px; font-weight: 700; color: var(--text); }
+.prova-nav { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; gap: 12px; background: rgba(8,12,16,0.95); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+.prova-nav-titulo { font-size: 15px; font-weight: 700; color: var(--text); flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .prova-timer { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--accent); min-width: 80px; text-align: right; }
 .prova-timer.urgente { color: #f87171; }
 .progress-bar { height: 3px; background: var(--surface2); width: 100%; }
@@ -641,7 +641,76 @@ textarea.input-field { resize: vertical; min-height: 120px; line-height: 1.5; }
 }
 
 @media (max-width: 600px) {
-  .materias-grid { grid-template-columns: 1fr; }
+  /* NAVBAR */
+  .navbar {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .logo { font-size: 16px; }
+
+  .nav-right { gap: 6px; }
+
+  .nav-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .tog { width: 52px; height: 28px; }
+  .knob { width: 22px; height: 22px; }
+  body.light .knob { transform: translateX(24px); }
+  .cld { right: 5px; width: 14px; height: 8px; }
+  .cld::before { width: 7px; height: 7px; top: -3px; left: 2px; }
+
+  /* HERO */
+  .hero { padding: 48px 0 36px; }
+  .hero-title { font-size: 28px; letter-spacing: -1px; }
+  .hero-sub { font-size: 14px; }
+  .hero-btns { flex-direction: column; align-items: stretch; gap: 10px; }
+  .btn-primary, .btn-secondary { width: 100%; text-align: center; padding: 13px; }
+
+  /* AÇÕES */
+  .acoes-card { padding: 18px 16px; }
+  .acoes-grid { grid-template-columns: 1fr; gap: 8px; }
+
+  /* MATÉRIAS */
+  .materias-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .materia-card { padding: 18px 12px 14px; }
+
+  /* MODAL */
+  .modal { padding: 24px 20px; }
   .modal-actions { grid-template-columns: 1fr; }
+
+  /* FEATURES */
   .features-grid { grid-template-columns: 1fr; }
+
+  /* PERFIL */
+  .perfil-header { padding: 20px; gap: 14px; }
+  .perfil-avatar { width: 48px; height: 48px; font-size: 20px; }
+  .perfil-nome { font-size: 18px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat-card { padding: 18px 12px; }
+  .stat-valor { font-size: 28px; }
+  .perfil-card { padding: 20px 16px; }
+
+  /* PROVA */
+  .questao-nav { padding: 12px 16px; gap: 6px; }
+  .questao-bubble { width: 30px; height: 30px; font-size: 11px; }
+  .prova-card { padding: 20px 16px; }
+  .questao-enunciado { font-size: 14px; }
+  .alternativa-btn { font-size: 13px; padding: 12px 14px; }
+  .prova-footer { padding: 12px 16px; }
+  .btn-nav { padding: 8px 14px; font-size: 13px; }
+  .btn-finalizar { padding: 8px 18px; font-size: 13px; }
+
+  /* ADMIN */
+  .admin-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .admin-card { padding: 20px 16px; }
+}
+
+@media (max-width: 375px) {
+  .logo { font-size: 14px; }
+  .nav-btn { padding: 5px 10px; font-size: 11px; }
+  .hero-title { font-size: 24px; }
+  .materias-grid { grid-template-columns: 1fr; }
 }
