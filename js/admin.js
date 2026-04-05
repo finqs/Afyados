@@ -20,20 +20,12 @@ btnExtrair.addEventListener('click', async () => {
     return
   }
 
-  const GEMINI_KEY = document.getElementById('gemini-key').value.trim()
-  if (!GEMINI_KEY) {
-    setStatus(adminStatus, 'Insira sua chave do Gemini.', 'erro')
-    return
-  }
-
   btnExtrair.disabled = true
-  setStatus(adminStatus, 'Enviando PDF para o Gemini...', 'info')
+  setStatus(adminStatus, '🤖 Enviando PDF para o Claude...', 'info')
 
   try {
     const file = pdfInput.files[0]
-    
-    // Módulo extrai fetch pesado, LLM instructions e os parsers das repostas do LLM
-    questoesExtraidas = await extrairQuestoesDoPdf(file, GEMINI_KEY)
+    questoesExtraidas = await extrairQuestoesDoPdf(file)
 
     setStatus(adminStatus, `✅ ${questoesExtraidas.length} questões extraídas com sucesso!`, 'sucesso')
     renderQuestoesAdmin(questoesContainer, questoesExtraidas, materia, ano, semestre, handleSalvarProva)
