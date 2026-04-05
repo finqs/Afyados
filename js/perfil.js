@@ -22,112 +22,79 @@ async function init() {
 }
 
 async function carregarDados(userId) {
-  // 1. Busca respostas do usuário
-  const { data: respostas } = await supabase
-    .from('respostas')
-    .select('*')
+  // Busca tentativas de exame finalizadas via join (muito mais rápido)
+  const { data: attempts } = await supabase
+    .from('exam_attempts')
+    .select(`
+      id,
+      score,
+      total,
+      finalizada,
+      created_at,
+      provas (
+        materia,
+        ano,
+        semestre
+      )
+    `)
     .eq('user_id', userId)
+    .eq('finalizada', true)
+    .order('created_at', { ascending: false })
 
-  if (!respostas || !respostas.length) {
+  if (!attempts || !attempts.length) {
     document.getElementById('stat-total').textContent = '0'
     document.getElementById('stat-acertos').textContent = '0%'
     document.getElementById('stat-provas').textContent = '0'
     document.getElementById('stat-materias').textContent = '0'
     document.getElementById('historico-lista').innerHTML = '<div class="loading-text">Nenhuma prova realizada ainda.</div>'
-    document.getElementById('materias-lista').innerHTML = '<div class="loading-text">Nenhuma questão respondida ainda.</div>'
+    document.getElementById('materias-lista').innerHTML = '<div class="loading-text">Nenhuma prova finalizada.</div>'
     return
   }
 
-  // 2. Busca questões relacionadas
-  const questaoIds = [...new Set(respostas.map(r => r.questao_id))]
-  const { data: questoes } = await supabase
-    .from('questoes')
-    .select('id, prova_id, materia:prova_id')
-    .in('id', questaoIds)
-
-  // 3. Busca provas relacionadas
-  const provaIds = [...new Set(questoes.map(q => q.prova_id))]
-  const { data: provas } = await supabase
-    .from('provas')
-    .select('*')
-    .in('id', provaIds)
-
-  // Mapas para lookup rápido
-  const questaoMap = {}
-  questoes.forEach(q => questaoMap[q.id] = q)
-
-  const provaMap = {}
-  provas.forEach(p => provaMap[p.id] = p)
-
   // Estatísticas gerais
-  const total = respostas.length
-  const acertos = respostas.filter(r => r.acertou).length
-  const percentGeral = Math.round((acertos / total) * 100)
+  const totalQuestoes = attempts.reduce((acc, a) => acc + a.total, 0)
+  const totalAcertos = attempts.reduce((acc, a) => acc + a.score, 0)
+  const percentGeral = totalQuestoes > 0 ? Math.round((totalAcertos / totalQuestoes) * 100) : 0
 
-  document.getElementById('stat-total').textContent = total
+  document.getElementById('stat-total').textContent = totalQuestoes
   document.getElementById('stat-acertos').textContent = percentGeral + '%'
+  document.getElementById('stat-provas').textContent = attempts.length
 
-  // Acertos por matéria
+  // Agrupamento por matéria
   const materiaMap = {}
-  respostas.forEach(r => {
-    const questao = questaoMap[r.questao_id]
-    if (!questao) return
-    const prova = provaMap[questao.prova_id]
-    if (!prova) return
-    const mat = prova.materia
-    if (!materiaMap[mat]) materiaMap[mat] = { total: 0, acertos: 0 }
-    materiaMap[mat].total++
-    if (r.acertou) materiaMap[mat].acertos++
+  attempts.forEach(a => {
+    const mat = a.provas?.materia || 'Outros'
+    if (!materiaMap[mat]) materiaMap[mat] = { score: 0, total: 0 }
+    materiaMap[mat].score += a.score
+    materiaMap[mat].total += a.total
   })
-
+  
   document.getElementById('stat-materias').textContent = Object.keys(materiaMap).length
 
-  // Histórico por prova
-  const provaHistMap = {}
-  respostas.forEach(r => {
-    const questao = questaoMap[r.questao_id]
-    if (!questao) return
-    const prova = provaMap[questao.prova_id]
-    if (!prova) return
-    const key = prova.id
-    if (!provaHistMap[key]) {
-      provaHistMap[key] = {
-        materia: prova.materia,
-        ano: prova.ano,
-        semestre: prova.semestre,
-        total: 0,
-        acertos: 0,
-        data: r.criado_em
-      }
-    }
-    provaHistMap[key].total++
-    if (r.acertou) provaHistMap[key].acertos++
-  })
-
-  const provasFeitas = Object.values(provaHistMap)
-  document.getElementById('stat-provas').textContent = provasFeitas.length
-
-  // Render histórico
+  // Histórico Formatado (já vêm ordenado por data descendente)
   const lista = document.getElementById('historico-lista')
-  lista.innerHTML = provasFeitas.map(p => {
-    const percent = Math.round((p.acertos / p.total) * 100)
+  lista.innerHTML = attempts.map(p => {
+    const percent = p.total > 0 ? Math.round((p.score / p.total) * 100) : 0
     const cor = percent >= 70 ? '#4ade80' : percent >= 50 ? 'var(--accent)' : '#f87171'
-    const data = new Date(p.data).toLocaleDateString('pt-BR')
+    const dataStr = new Date(p.created_at).toLocaleDateString('pt-BR')
+    const mat = p.provas?.materia || 'Prova'
+    const anoSem = p.provas ? `${p.provas.ano}.${p.provas.semestre}` : ''
+    
     return `
       <div class="historico-item">
         <div class="historico-info">
-          <div class="historico-materia">${p.materia} · ${p.ano}.${p.semestre}</div>
-          <div class="historico-data">${data} · ${p.total} questões</div>
+          <div class="historico-materia">${mat} · ${anoSem}</div>
+          <div class="historico-data">${dataStr} · ${p.total} questões</div>
         </div>
-        <div class="historico-score" style="color:${cor}">${p.acertos}/${p.total}</div>
+        <div class="historico-score" style="color:${cor}">${p.score}/${p.total}</div>
       </div>
     `
   }).join('')
 
-  // Render matérias
+  // Barras de matérias
   const materiaLista = document.getElementById('materias-lista')
   materiaLista.innerHTML = Object.entries(materiaMap).map(([nome, dados]) => {
-    const percent = Math.round((dados.acertos / dados.total) * 100)
+    const percent = dados.total > 0 ? Math.round((dados.score / dados.total) * 100) : 0
     const cor = percent >= 70 ? '#4ade80' : percent >= 50 ? 'var(--accent)' : '#f87171'
     return `
       <div class="materia-item">
@@ -140,17 +107,34 @@ async function carregarDados(userId) {
     `
   }).join('')
 
-  // Gráfico
-  renderGrafico(provasFeitas)
+  // Prepara dados pro Gráfico Chart.js
+  const chartData = attempts.map(p => ({
+    materia: p.provas?.materia || 'Outros',
+    ano: p.provas?.ano || '',
+    semestre: p.provas?.semestre || '',
+    acertos: p.score,
+    total: p.total
+  }))
+
+  // Revertendo array para mostrar no gráfico da mais antiga pra mais nova
+  renderGrafico(chartData.reverse())
 }
+
+let chartInstance = null
 
 function renderGrafico(provas) {
   const ctx = document.getElementById('chart-materias').getContext('2d')
+  
+  if (chartInstance) {
+    chartInstance.destroy()
+  }
+
   const labels = provas.map(p => `${p.materia} ${p.ano}.${p.semestre}`)
+
   const valores = provas.map(p => Math.round((p.acertos / p.total) * 100))
   const cores = valores.map(v => v >= 70 ? '#4ade80' : v >= 50 ? '#2d7ef7' : '#f87171')
 
-  new Chart(ctx, {
+  chartInstance = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,

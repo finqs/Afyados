@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js'
+import { escapeHtml } from './utils/utils.js'
 
 // Estado da prova
 let questoes = []
@@ -11,6 +12,7 @@ let tempoRestante = 0
 let intervalTimer = null
 let provaIniciada = false
 let provaId = null
+let attemptId = null
 
 // Pega parâmetros da URL
 const params = new URLSearchParams(window.location.search)
@@ -31,7 +33,7 @@ async function carregarQuestoes() {
     .eq('prova_id', provaId)
     .order('numero')
 
-  if (error || !data.length) {
+  if (error || !data || !data.length) {
     document.getElementById('prova-card').innerHTML = '<div class="loading-text">Erro ao carregar questões.</div>'
     return
   }
@@ -56,9 +58,28 @@ document.getElementById('cfg-timer').addEventListener('change', function() {
 })
 
 // Iniciar prova
-document.getElementById('btn-iniciar').addEventListener('click', () => {
+document.getElementById('btn-iniciar').addEventListener('click', async () => {
   tempoTotal = parseInt(document.getElementById('cfg-tempo').value) * 60
   tempoRestante = tempoTotal
+  
+  document.getElementById('btn-iniciar').textContent = 'Iniciando...'
+  document.getElementById('btn-iniciar').disabled = true
+
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (session) {
+    const { data: attempt, error } = await supabase.from('exam_attempts').insert({
+      user_id: session.user.id,
+      prova_id: provaId,
+      modo: modoGabarito,
+      total: questoes.length
+    }).select().single()
+
+    if (!error && attempt) {
+      attemptId = attempt.id
+    }
+  }
+
   document.getElementById('modal-config').classList.remove('active')
   provaIniciada = true
   renderQuestao()
@@ -123,6 +144,9 @@ function renderQuestao() {
     { letra: 'C', texto: q.alternativa_c },
     { letra: 'D', texto: q.alternativa_d }
   ]
+  if (q.alternativa_e) {
+    alternativas.push({ letra: 'E', texto: q.alternativa_e })
+  }
 
   let gabaritoHTML = ''
   if (respondida && modoGabarito === 'apos') {
@@ -130,16 +154,16 @@ function renderQuestao() {
     gabaritoHTML = `
       <div class="gabarito-box ${acertou ? 'acerto' : 'erro'}">
         <div class="gabarito-resultado ${acertou ? 'acerto' : 'erro'}">
-          ${acertou ? '✓ Mandou bem!' : `✗ Resposta correta: ${q.gabarito}`}
+          ${acertou ? '✓ Mandou bem!' : `✗ Resposta correta: ${escapeHtml(q.gabarito)}`}
         </div>
-        ${q.comentario ? `<div>${q.comentario}</div>` : ''}
+        ${q.comentario ? `<div>${escapeHtml(q.comentario)}</div>` : ''}
       </div>
     `
   }
 
   document.getElementById('prova-card').innerHTML = `
     <div class="questao-numero">QUESTÃO ${questaoAtual + 1} DE ${questoes.length}</div>
-    <div class="questao-enunciado">${q.enunciado}</div>
+    <div class="questao-enunciado">${escapeHtml(q.enunciado)}</div>
     <div class="alternativas-list">
       ${alternativas.map(alt => {
         let classe = 'alternativa-btn'
@@ -150,7 +174,7 @@ function renderQuestao() {
         return `
           <button class="${classe}" ${respondida ? 'disabled' : ''} onclick="responder('${alt.letra}')">
             <span class="alternativa-letra">${alt.letra}</span>
-            ${alt.texto}
+            ${escapeHtml(alt.texto)}
           </button>
         `
       }).join('')}
@@ -181,11 +205,10 @@ window.responder = function(letra) {
 }
 
 async function salvarResposta(questaoId, resposta, acertou) {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return
+  if (!attemptId) return
 
-  await supabase.from('respostas').insert({
-    user_id: session.user.id,
+  await supabase.from('attempt_answers').insert({
+    attempt_id: attemptId,
     questao_id: questaoId,
     resposta,
     acertou
@@ -204,11 +227,25 @@ document.getElementById('btn-proxima').addEventListener('click', () => {
 document.getElementById('btn-finalizar').addEventListener('click', finalizarProva)
 
 // Finalizar
-function finalizarProva() {
+async function finalizarProva() {
   clearInterval(intervalTimer)
+  
+  document.getElementById('btn-finalizar').textContent = 'Finalizando...'
+  document.getElementById('btn-finalizar').disabled = true
+
   const total = questoes.length
   const acertos = questoes.filter((q, i) => respostas[i] === q.gabarito).length
-  const percent = Math.round((acertos / total) * 100)
+  const percent = total > 0 ? Math.round((acertos / total) * 100) : 0
+
+  if (attemptId) {
+    await supabase.from('exam_attempts').update({
+      finalizada: true,
+      score: acertos
+    }).eq('id', attemptId)
+  }
+
+  document.getElementById('btn-finalizar').textContent = 'Finalizar Prova'
+  document.getElementById('btn-finalizar').disabled = false
 
   document.getElementById('resultado-score').textContent = `${acertos}/${total}`
   document.getElementById('resultado-percent').textContent = `${percent}%`
@@ -238,3 +275,8 @@ window.confirmarSaida = function() {
     window.location.href = 'index.html'
   }
 }
+
+// Limpar timer ao sair da página
+window.addEventListener('beforeunload', () => {
+  if (intervalTimer) clearInterval(intervalTimer)
+})

@@ -3,33 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Afyados · Cadastro</title>
+  <title>MedFlow.AI · Cadastro</title>
+  <meta name="description" content="Crie sua conta gratuita no MedFlow.AI e comece a estudar medicina com questões e simulados.">
+  <script src="js/tema.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
   <nav class="navbar">
     <div></div>
-    <div class="logo">Afyados</div>
-    <div></div>
+    <div class="logo">Med<b>Flow</b>.AI</div>
+    <div class="tog-wrap" id="tog-wrap">
+      <div class="tog">
+        <div class="knob">
+          <div class="dots">
+            <div class="dot"></div><div class="dot"></div>
+            <div class="dot"></div><div class="dot"></div>
+          </div>
+        </div>
+        <div class="cld"></div>
+      </div>
+    </div>
   </nav>
 
   <main class="auth-main">
     <div class="auth-card">
       <h2 class="auth-title">Criar conta</h2>
-      <p class="auth-sub">Junte-se à comunidade Afyados</p>
+      <p class="auth-sub">Junte-se à comunidade MedFlow.AI</p>
 
       <div class="auth-form">
         <div class="input-group">
-          <label class="input-label">Nome completo</label>
+          <label class="input-label" for="nome">Nome completo</label>
           <input type="text" id="nome" class="input-field" placeholder="Seu nome">
         </div>
         <div class="input-group">
-          <label class="input-label">E-mail</label>
+          <label class="input-label" for="email">E-mail</label>
           <input type="email" id="email" class="input-field" placeholder="seu@email.com">
         </div>
         <div class="input-group">
-          <label class="input-label">Senha</label>
+          <label class="input-label" for="senha">Senha</label>
           <input type="password" id="senha" class="input-field" placeholder="Mínimo 6 caracteres">
         </div>
         <button class="btn-primary" id="btn-cadastro">Criar conta</button>

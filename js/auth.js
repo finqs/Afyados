@@ -24,6 +24,7 @@ if (btnLogin) {
       btnLogin.textContent = 'Entrar'
       btnLogin.disabled = false
     } else {
+      btnLogin.textContent = 'Redirecionando...'
       window.location.href = 'index.html'
     }
   })

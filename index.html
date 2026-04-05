@@ -3,209 +3,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Afyados</title>
+  <title>MedFlow.AI</title>
+  <meta name="description" content="Plataforma gratuita de estudo em medicina. Organize seus estudos, resolva questões, crie simulados personalizados e utilize IA.">
+  <script src="js/tema.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
   <nav class="navbar">
-    <button class="nav-btn" id="btn-perfil">Perfil</button>
-    <div class="logo">Afyados</div>
-    <button class="nav-btn nav-apoie">♥ Apoie!</button>
+    <div class="logo">Med<b>Flow</b>.AI</div>
+    <div class="nav-right">
+      <div class="tog-wrap" id="tog-wrap">
+        <div class="tog" id="tog">
+          <div class="knob">
+            <div class="dots">
+              <div class="dot"></div><div class="dot"></div>
+              <div class="dot"></div><div class="dot"></div>
+            </div>
+          </div>
+          <div class="cld"></div>
+        </div>
+      </div>
+      <button class="nav-btn" id="btn-perfil">Perfil</button>
+      <button class="nav-btn nav-apoie" id="btn-auth">Login</button>
+    </div>
   </nav>
 
   <main class="main">
-    <h1 class="hero-title">Afyados</h1>
-    <p class="hero-sub">De estudante para estudantes.</p>
+    <div class="hero">
+      <div class="hero-tag">MEDICINA · PBL · QUESTÕES</div>
+      <h1 class="hero-title">Seu ambiente completo<br>de <span>estudo em medicina</span></h1>
+      <p class="hero-sub">Organize seus estudos, resolva questões, crie simulados personalizados e utilize IA quando quiser.</p>
+      <div class="hero-btns">
+        <button class="btn-primary">Começar a estudar</button>
+        <button class="btn-secondary" id="btn-sobre">Saiba mais</button>
+      </div>
+    </div>
+
+    <div class="acoes-card">
+      <div class="acoes-title">Você escolhe <b>como</b> estudar hoje:</div>
+      <div class="acoes-grid">
+        <div class="acao-item" id="acao-banco">
+          <div class="acao-icon az">📖</div>
+          <div class="acao-txt">
+            <div class="acao-nome">Explorar banco de questões</div>
+            <div class="acao-desc">Questões organizadas por período e matéria</div>
+          </div>
+          <span class="acao-arr">›</span>
+        </div>
+        <div class="acao-item" id="acao-simulado">
+          <div class="acao-icon vl">📋</div>
+          <div class="acao-txt">
+            <div class="acao-nome">Criar simulado personalizado</div>
+            <div class="acao-desc">Monte do seu jeito: matérias, quantidade, dificuldade</div>
+          </div>
+          <span class="acao-arr">›</span>
+        </div>
+        <div class="acao-item">
+          <div class="acao-icon gn">⬆</div>
+          <div class="acao-txt">
+            <div class="acao-nome">Enviar uma prova</div>
+            <div class="acao-desc">Extraímos as questões automaticamente com IA</div>
+          </div>
+          <span class="acao-arr">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec" id="sec-periodos">
+      <div class="sec-label">SELECIONE O PERÍODO</div>
+      <div class="pills" id="pills-periodos">
+        <div class="pill" data-periodo="1">1º Período</div>
+        <div class="pill" data-periodo="2">2º Período</div>
+        <div class="pill" data-periodo="3">3º Período</div>
+        <div class="pill" data-periodo="4">4º Período</div>
+        <div class="pill" data-periodo="5">5º Período</div>
+        <div class="pill" data-periodo="6">6º Período</div>
+        <div class="pill" data-periodo="7">7º Período</div>
+        <div class="pill" data-periodo="8">8º Período</div>
+        <div class="pill" data-periodo="internato">Internato</div>
+      </div>
+    </div>
+
+    <div class="sec" id="sec-materias">
+      <div class="sec-label" id="materias-label">MATÉRIAS</div>
+      <div class="materias-grid" id="materias-grid"></div>
+    </div>
+
   </main>
 
-<!-- MODAL SOBRE -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-logo">Med<b>Flow</b>.AI</div>
+      <p class="footer-desc">Feito por estudantes, para estudantes.</p>
+      <div class="footer-links">
+        <button class="footer-link" id="fl-sobre">Sobre</button>
+        <button class="footer-link" id="fl-apoie">Apoie</button>
+        <button class="footer-link" id="fl-contato">Contato</button>
+      </div>
+      <div class="footer-bottom">© 2025 MedFlow.AI · Todos os direitos reservados</div>
+    </div>
+  </footer>
+
+  <!-- MODAL SOBRE -->
   <div class="modal-overlay" id="modal-sobre">
     <div class="modal">
-      <button class="modal-close" id="modal-sobre-close">X</button>
+      <button class="modal-close" id="modal-sobre-close">×</button>
       <div class="modal-title-bar">SOBRE O PROJETO</div>
       <p class="sobre-text">
-        O <strong>Afyados</strong> é uma plataforma criada por estudantes da Afya para estudantes da Afya.
+        O <strong>MedFlow.AI</strong> é uma plataforma criada por estudantes de medicina para estudantes de medicina.
         O objetivo é centralizar provas antigas, simulados personalizados e materiais de estudo —
         tudo em um só lugar, de forma gratuita.
       </p>
       <div class="features-grid">
-        <div class="feature-item">
-          <span class="feature-icon">📄</span>
-          <span>Provas organizadas por matéria e período</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">📝</span>
-          <span>Simulados com níveis fácil, médio e difícil</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">📊</span>
-          <span>Acompanhamento do seu desempenho</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">🤖</span>
-          <span>IA que identifica seus pontos fracos</span>
-        </div>
+        <div class="feature-item"><span class="feature-icon">📄</span><span>Provas organizadas por matéria e período</span></div>
+        <div class="feature-item"><span class="feature-icon">📝</span><span>Simulados com níveis fácil, médio e difícil</span></div>
+        <div class="feature-item"><span class="feature-icon">📊</span><span>Acompanhamento do seu desempenho</span></div>
+        <div class="feature-item"><span class="feature-icon">🤖</span><span>IA que identifica seus pontos fracos</span></div>
       </div>
     </div>
   </div>
-  </section>
-  <section class="periods-section">
-    <div class="periods-grid">
 
-      <!-- 1º Período -->
-      <div class="period-card">
-        <div class="period-header">
-          <span class="period-title">1º Período</span>
-          <span class="period-count">4 matérias</span>
-        </div>
-        <div class="subjects-grid">
-          <button class="subject-card"><span class="subject-name">SOI 1</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">HAM 1</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">IESC 1</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">MCM 1</span><span class="btn-ver">VER</span></button>
-        </div>
-      </div>
-
-      <!-- 2º Período -->
-      <div class="period-card">
-        <div class="period-header">
-          <span class="period-title">2º Período</span>
-          <span class="period-count">4 matérias</span>
-        </div>
-        <div class="subjects-grid">
-          <button class="subject-card"><span class="subject-name">SOI 2</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">HAM 2</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">IESC 2</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">MCM 2</span><span class="btn-ver">VER</span></button>
-        </div>
-      </div>
-
-      <!-- 3º Período -->
-      <div class="period-card">
-        <div class="period-header">
-          <span class="period-title">3º Período</span>
-          <span class="period-count">4 matérias</span>
-        </div>
-        <div class="subjects-grid">
-          <button class="subject-card"><span class="subject-name">SOI 3</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">HAM 3</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">IESC 3</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">MCM 3</span><span class="btn-ver">VER</span></button>
-        </div>
-      </div>
-
-      <!-- 4º Período -->
-      <div class="period-card">
-        <div class="period-header">
-          <span class="period-title">4º Período</span>
-          <span class="period-count">3 matérias</span>
-        </div>
-        <div class="subjects-grid">
-          <button class="subject-card"><span class="subject-name">SOI 4</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">HAM 4</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">IESC 4</span><span class="btn-ver">VER</span></button>
-        </div>
-      </div>
-
-      <!-- 5º Período -->
-      <div class="period-card">
-        <div class="period-header">
-          <span class="period-title">5º Período</span>
-          <span class="period-count">4 matérias</span>
-        </div>
-        <div class="subjects-grid">
-          <button class="subject-card"><span class="subject-name">SOI 5</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">HAM 5</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">IESC 5</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">CC 1</span><span class="btn-ver">VER</span></button>
-        </div>
-      </div>
-
-      <!-- 6º Período -->
-      <div class="period-card">
-        <div class="period-header">
-          <span class="period-title">6º Período</span>
-          <span class="period-count">4 matérias</span>
-        </div>
-        <div class="subjects-grid">
-          <button class="subject-card"><span class="subject-name">CI 1</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">HAM 6</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">IESC 6</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">CC 2</span><span class="btn-ver">VER</span></button>
-        </div>
-      </div>
-
-      <!-- 7º Período -->
-      <div class="period-card">
-        <div class="period-header">
-          <span class="period-title">7º Período</span>
-          <span class="period-count">4 matérias</span>
-        </div>
-        <div class="subjects-grid">
-          <button class="subject-card"><span class="subject-name">CI 2</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">HAM 7</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">IESC 7</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">CC 3</span><span class="btn-ver">VER</span></button>
-        </div>
-      </div>
-
-      <!-- 8º Período -->
-      <div class="period-card">
-        <div class="period-header">
-          <span class="period-title">8º Período</span>
-          <span class="period-count">4 matérias</span>
-        </div>
-        <div class="subjects-grid">
-          <button class="subject-card"><span class="subject-name">CI 3</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">HAM 8</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">IESC 8</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">CC 4</span><span class="btn-ver">VER</span></button>
-        </div>
-      </div>
-
-      <!-- Internato -->
-      <div class="period-card">
-        <div class="period-header">
-          <span class="period-title">Internato</span>
-          <span class="period-count">6 matérias</span>
-        </div>
-        <div class="subjects-grid">
-          <button class="subject-card"><span class="subject-name">APS</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">CC</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">CM</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">GO</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">PED</span><span class="btn-ver">VER</span></button>
-          <button class="subject-card"><span class="subject-name">UESM</span><span class="btn-ver">VER</span></button>
-        </div>
-      </div>
-
-    </div>
-  </section>
-  <!-- RODAPÉ -->
-  <footer class="footer">
-    <div class="footer-content">
-      <div class="footer-logo">Afyados</div>
-      <p class="footer-desc">Feito por estudantes, para estudantes da Afya.</p>
-      <div class="footer-links">
-        <button class="footer-link">Sobre</button>
-        <button class="footer-link">Apoie</button>
-        <button class="footer-link">Contato</button>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2025 Afyados · Todos os direitos reservados</span>
-      </div>
-    </div>
-  </footer>
-
-  <!-- MODAL -->
+  <!-- MODAL PAINEL -->
   <div class="modal-overlay" id="modal">
     <div class="modal">
       <button class="modal-close" id="modal-close">×</button>
       <div class="modal-title-bar">PAINEL DE CONTROLE</div>
-      <div class="modal-subject" id="modal-subject">SOI 1</div>
+      <div class="modal-subject" id="modal-subject"></div>
       <div class="modal-actions">
-        <button class="modal-btn modal-btn-primary">
+        <button class="modal-btn modal-btn-primary" id="modal-btn-provas">
           <span class="modal-btn-icon">📄</span>
           <div>
             <div class="modal-btn-title">Provas Antigas</div>
@@ -234,7 +160,7 @@
           </div>
         </button>
       </div>
-      <div class="modal-footer">AFYADOS V1.0</div>
+      <div class="modal-footer">MEDFLOW.AI V1.0</div>
     </div>
   </div>
 

@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Afyados · Prova</title>
+  <title>MedFlow.AI · Prova</title>
+  <meta name="description" content="Resolva questões de medicina no MedFlow.AI com gabarito, timer e acompanhamento de desempenho.">
+  <script src="js/tema.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -12,7 +14,20 @@
   <nav class="prova-nav">
     <button class="nav-btn" id="btn-inicio" onclick="confirmarSaida()">← Início</button>
     <div id="prova-titulo" class="prova-nav-titulo">SOI 1 · 2023.1</div>
-    <div class="prova-timer" id="timer">--:--</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="tog-wrap" id="tog-wrap">
+        <div class="tog">
+          <div class="knob">
+            <div class="dots">
+              <div class="dot"></div><div class="dot"></div>
+              <div class="dot"></div><div class="dot"></div>
+            </div>
+          </div>
+          <div class="cld"></div>
+        </div>
+      </div>
+      <div class="prova-timer" id="timer">--:--</div>
+    </div>
   </nav>
 
   <!-- BARRA DE PROGRESSO -->
