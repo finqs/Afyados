@@ -1,13 +1,17 @@
-import Anthropic from '@anthropic-ai/sdk'
+const Anthropic = require('@anthropic-ai/sdk')
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
-})
-
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido.' })
   }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+
+  if (!apiKey) {
+    return res.status(500).json({ error: 'Chave da API não configurada.' })
+  }
+
+  const client = new Anthropic({ apiKey })
 
   try {
     const { pdfBase64 } = req.body
