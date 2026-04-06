@@ -34,6 +34,7 @@ export function normalizeQuestao(q, index) {
 
   const numero = parseInt(q.numero, 10)
   const enunciado = cleanText(q.enunciado)
+  const tipo = cleanText(q.tipo) === 'aberta' ? 'aberta' : 'multipla_escolha'
   const alternativa_a = cleanText(q.alternativa_a)
   const alternativa_b = cleanText(q.alternativa_b)
   const alternativa_c = cleanText(q.alternativa_c)
@@ -41,24 +42,31 @@ export function normalizeQuestao(q, index) {
   const alternativa_e = cleanText(q.alternativa_e)
   const comentario = cleanText(q.comentario)
 
-  let gabarito = cleanText(q.gabarito).toUpperCase()
-  gabarito = gabarito.replace(/[^A-E]/g, '').charAt(0)
-
-  if (!numero || !enunciado || !alternativa_a || !alternativa_b || !alternativa_c || !alternativa_d) {
+  if (!numero || !enunciado) {
     console.warn(`Questão ignorada por campos obrigatórios ausentes no índice ${index}:`, q)
     return null
   }
 
-  if (!gabarito || !['A', 'B', 'C', 'D', 'E'].includes(gabarito)) {
-    gabarito = ''
+  if (tipo === 'multipla_escolha' && (!alternativa_a || !alternativa_b || !alternativa_c || !alternativa_d)) {
+    console.warn(`Questão ignorada por alternativas ausentes no índice ${index}:`, q)
+    return null
   }
 
-  if (gabarito === 'E' && !alternativa_e) {
-    console.warn(`Questão ${numero} tem gabarito E, mas não possui alternativa E.`)
+  let gabarito = cleanText(q.gabarito)
+
+  if (tipo === 'multipla_escolha') {
+    gabarito = gabarito.toUpperCase().replace(/[^A-E]/g, '').charAt(0)
+    if (!gabarito || !['A', 'B', 'C', 'D', 'E'].includes(gabarito)) {
+      gabarito = ''
+    }
+    if (gabarito === 'E' && !alternativa_e) {
+      console.warn(`Questão ${numero} tem gabarito E, mas não possui alternativa E.`)
+    }
   }
 
   return {
     numero,
+    tipo,
     enunciado,
     alternativa_a,
     alternativa_b,

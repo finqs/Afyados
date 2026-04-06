@@ -198,4 +198,148 @@ function renderQuestao() {
       gabaritoHTML = `
         <div class="gabarito-box ${acertou ? 'acerto' : 'erro'}">
           <div class="gabarito-resultado ${acertou ? 'acerto' : 'erro'}">
-            ${ac
+            ${acertou ? '✓ Mandou bem!' : `✗ Resposta correta: ${escapeHtml(q.gabarito)}`}
+          </div>
+          ${q.comentario ? `<div>${escapeHtml(q.comentario)}</div>` : ''}
+        </div>
+      `
+    }
+
+    conteudoQuestao = `
+      <div class="alternativas-list">
+        ${alternativas.map(alt => {
+          let classe = 'alternativa-btn'
+          if (respondida) {
+            if (alt.letra === q.gabarito) classe += ' correta'
+            else if (alt.letra === respostas[questaoAtual]) classe += ' errada'
+          }
+          return `
+            <button class="${classe}" ${respondida ? 'disabled' : ''} onclick="responder('${alt.letra}')">
+              <span class="alternativa-letra">${alt.letra}</span>
+              ${escapeHtml(alt.texto)}
+            </button>
+          `
+        }).join('')}
+      </div>
+      ${gabaritoHTML}
+    `
+  }
+
+  document.getElementById('prova-card').innerHTML = `
+    <div class="questao-numero">QUESTÃO ${questaoAtual + 1} DE ${questoes.length}</div>
+    <div class="questao-enunciado">${escapeHtml(q.enunciado)}</div>
+    ${conteudoQuestao}
+  `
+
+  renderBubbles()
+}
+
+// Responder múltipla escolha
+window.responder = function(letra) {
+  if (respostas[questaoAtual] !== undefined) return
+  respostas[questaoAtual] = letra
+  salvarResposta(questoes[questaoAtual].id, letra, letra === questoes[questaoAtual].gabarito)
+  renderQuestao()
+}
+
+// Questão aberta
+window.verGabaritoAberta = function() {
+  const textarea = document.getElementById('resposta-aberta')
+  const texto = textarea ? textarea.value.trim() : ''
+  respostasTexto[questaoAtual] = texto
+  respostas[questaoAtual] = '0'
+  renderQuestao()
+}
+
+window.notarAberta = function(nota) {
+  respostas[questaoAtual] = nota
+  salvarResposta(questoes[questaoAtual].id, nota, parseFloat(nota) / 100)
+  renderQuestao()
+  renderBubbles()
+}
+
+async function salvarResposta(questaoId, resposta, acertou) {
+  if (!attemptId) return
+
+  await supabase.from('attempt_answers').insert({
+    attempt_id: attemptId,
+    questao_id: questaoId,
+    resposta,
+    acertou
+  })
+}
+
+// Navegação
+document.getElementById('btn-anterior').addEventListener('click', () => {
+  if (questaoAtual > 0) { questaoAtual--; renderQuestao() }
+})
+
+document.getElementById('btn-proxima').addEventListener('click', () => {
+  if (questaoAtual < questoes.length - 1) { questaoAtual++; renderQuestao() }
+})
+
+document.getElementById('btn-finalizar').addEventListener('click', finalizarProva)
+
+// Finalizar
+async function finalizarProva() {
+  clearInterval(intervalTimer)
+
+  document.getElementById('btn-finalizar').textContent = 'Finalizando...'
+  document.getElementById('btn-finalizar').disabled = true
+
+  const total = questoes.length
+  const acertos = questoes.filter((q, i) => {
+    if (q.tipo === 'aberta') {
+      const nota = parseFloat(respostas[i]) || 0
+      return nota >= 100
+    }
+    return respostas[i] === q.gabarito
+  }).length
+  const percent = total > 0 ? Math.round((acertos / total) * 100) : 0
+
+  if (attemptId) {
+    await supabase.from('exam_attempts').update({
+      finalizada: true,
+      score: acertos
+    }).eq('id', attemptId)
+  }
+
+  document.getElementById('btn-finalizar').textContent = 'Finalizar Prova'
+  document.getElementById('btn-finalizar').disabled = false
+
+  document.getElementById('resultado-score').textContent = `${acertos}/${total}`
+  document.getElementById('resultado-percent').textContent = `${percent}%`
+  document.getElementById('resultado-msg').textContent =
+    percent >= 70 ? '🎉 Ótimo desempenho!' :
+    percent >= 50 ? '📚 Continue estudando!' :
+    '💪 Não desista, revise o conteúdo!'
+
+  document.getElementById('resultado-grid').innerHTML = questoes.map((q, i) => {
+    let classe = 'resultado-item'
+    if (respostas[i] === undefined) classe += ' pulou'
+    else if (q.tipo === 'aberta') {
+      const nota = parseFloat(respostas[i]) || 0
+      classe += nota >= 75 ? ' acerto' : nota > 0 ? ' respondida' : ' erro'
+    } else if (respostas[i] === q.gabarito) classe += ' acerto'
+    else classe += ' erro'
+    return `<div class="${classe}">${i + 1}</div>`
+  }).join('')
+
+  document.getElementById('modal-resultado').classList.add('active')
+}
+
+// Confirmar saída
+window.confirmarSaida = function() {
+  if (provaIniciada && Object.keys(respostas).length > 0) {
+    if (confirm('Deseja sair? Seu progresso será perdido.')) {
+      window.location.href = 'index.html'
+    }
+  } else {
+    window.location.href = 'index.html'
+  }
+}
+
+// Limpar timer ao sair da página
+window.addEventListener('beforeunload', () => {
+  if (intervalTimer) clearInterval(intervalTimer)
+})
