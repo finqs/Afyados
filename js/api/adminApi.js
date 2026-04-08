@@ -30,12 +30,13 @@ export async function salvarProvaEBanco(materia, periodo, ano, semestre, questoe
 
   const questoesParaSalvar = questoesExtraidas.map(q => ({
     prova_id: prova.id,
+    tipo: q.tipo || 'multipla_escolha',
     numero: q.numero,
     enunciado: q.enunciado,
-    alternativa_a: q.alternativa_a,
-    alternativa_b: q.alternativa_b,
-    alternativa_c: q.alternativa_c,
-    alternativa_d: q.alternativa_d,
+    alternativa_a: q.alternativa_a || '',
+    alternativa_b: q.alternativa_b || '',
+    alternativa_c: q.alternativa_c || '',
+    alternativa_d: q.alternativa_d || '',
     alternativa_e: q.alternativa_e || '',
     gabarito: q.gabarito,
     comentario: q.comentario || ''
@@ -49,5 +50,5 @@ export async function salvarProvaEBanco(materia, periodo, ano, semestre, questoe
     throw new Error(`Erro ao salvar questões: ${erroQuestoes.message}`)
   }
 
-  return true;
+  return true
 }
