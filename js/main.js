@@ -1,11 +1,6 @@
 import { supabase } from './supabase.js'
 import { escapeHtml } from './utils/utils.js'
 
-// ==========================================
-// TEMA DARK / LIGHT — gerenciado pelo tema.js
-// ==========================================
-// ELEMENTOS DO DOM
-// ==========================================
 const modal = document.getElementById('modal')
 const modalSubject = document.getElementById('modal-subject')
 const modalClose = document.getElementById('modal-close')
@@ -16,7 +11,7 @@ const materiasGrid = document.getElementById('materias-grid')
 const materiasLabel = document.getElementById('materias-label')
 
 // ==========================================
-// MODAL MATÉRIA (PAINEL DE CONTROLE)
+// MODAL MATÉRIA
 // ==========================================
 function abrirModalMateria(nome, periodo) {
   modalSubject.textContent = nome
@@ -33,10 +28,7 @@ function abrirModalMateria(nome, periodo) {
 modalClose.addEventListener('click', closeModal)
 modal.addEventListener('click', (e) => { if (e.target === modal) closeModal() })
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    closeModal()
-    fecharModalSobre()
-  }
+  if (e.key === 'Escape') { closeModal(); fecharModalSobre() }
 })
 
 function closeModal() {
@@ -45,37 +37,33 @@ function closeModal() {
 }
 
 // ==========================================
-// MODAL SOBRE (usa btn-sobre, NÃO btn-perfil)
+// MODAL SOBRE
 // ==========================================
 const btnSobre = document.getElementById('btn-sobre')
-if (btnSobre) {
-  btnSobre.addEventListener('click', () => abrirModalSobre())
-}
+if (btnSobre) btnSobre.addEventListener('click', () => abrirModalSobre())
 
-modalSobreClose.addEventListener('click', fecharModalSobre)
-modalSobre.addEventListener('click', (e) => {
-  if (e.target === modalSobre) fecharModalSobre()
-})
+if (modalSobreClose) modalSobreClose.addEventListener('click', fecharModalSobre)
+if (modalSobre) modalSobre.addEventListener('click', (e) => { if (e.target === modalSobre) fecharModalSobre() })
 
 function abrirModalSobre() {
-  modalSobre.classList.add('active')
-  document.body.style.overflow = 'hidden'
+  if (modalSobre) { modalSobre.classList.add('active'); document.body.style.overflow = 'hidden' }
+}
+function fecharModalSobre() {
+  if (modalSobre) { modalSobre.classList.remove('active'); document.body.style.overflow = '' }
 }
 
-function fecharModalSobre() {
-  modalSobre.classList.remove('active')
-  document.body.style.overflow = ''
-}
+// Footer sobre
+const flSobre = document.getElementById('fl-sobre')
+if (flSobre) flSobre.addEventListener('click', () => abrirModalSobre())
+
+const flContato = document.getElementById('fl-contato')
+if (flContato) flContato.addEventListener('click', () => { window.location.href = 'mailto:filipenqs@hotmail.com' })
 
 // ==========================================
-// PERFIL (btn-perfil agora SÓ redireciona)
+// PERFIL
 // ==========================================
 const btnPerfil = document.getElementById('btn-perfil')
-if (btnPerfil) {
-  btnPerfil.addEventListener('click', () => {
-    window.location.href = 'perfil.html'
-  })
-}
+if (btnPerfil) btnPerfil.addEventListener('click', () => { window.location.href = 'perfil.html' })
 
 // ==========================================
 // NAVBAR LOGIN/LOGOUT
@@ -86,50 +74,47 @@ async function verificarSessao() {
 }
 
 function atualizarBotaoSessao(session) {
-  const btn = document.querySelector('.nav-apoie')
+  const btn = document.getElementById('btn-auth') || document.querySelector('.nav-apoie')
   if (!btn) return
 
   if (session) {
     btn.textContent = 'Sair'
     btn.onclick = async () => {
       await supabase.auth.signOut()
+      window.location.reload()
     }
   } else {
     btn.textContent = 'Login'
-    btn.onclick = () => {
-      window.location.href = 'login.html'
-    }
+    btn.onclick = () => { window.location.href = 'login.html' }
   }
 }
 
 supabase.auth.onAuthStateChange((event, session) => {
   atualizarBotaoSessao(session)
-  if (event === 'SIGNED_OUT') {
-    window.location.reload()
-  }
+  if (event === 'SIGNED_OUT') window.location.reload()
 })
 
 verificarSessao()
 
 // ==========================================
-// PERÍODOS → CARREGAR MATÉRIAS
+// PERÍODOS → MATÉRIAS
 // ==========================================
 let periodoAtivo = null
 
 if (pillsContainer) {
-  pillsContainer.querySelectorAll('.pill').forEach(pill => {
+  pillsContainer.querySelectorAll('.pill, .period-tab').forEach(pill => {
     pill.addEventListener('click', () => {
       const periodo = pill.dataset.periodo
 
       if (periodoAtivo === periodo) {
         periodoAtivo = null
-        pill.classList.remove('active')
-        materiasGrid.innerHTML = ''
+        pillsContainer.querySelectorAll('.pill, .period-tab').forEach(p => p.classList.remove('active'))
+        if (materiasGrid) materiasGrid.innerHTML = ''
         if (materiasLabel) materiasLabel.textContent = 'MATÉRIAS'
         return
       }
 
-      pillsContainer.querySelectorAll('.pill').forEach(p => p.classList.remove('active'))
+      pillsContainer.querySelectorAll('.pill, .period-tab').forEach(p => p.classList.remove('active'))
       pill.classList.add('active')
       periodoAtivo = periodo
       carregarMaterias(periodo)
@@ -138,22 +123,18 @@ if (pillsContainer) {
 }
 
 async function carregarMaterias(periodo) {
+  if (!materiasGrid) return
   materiasGrid.innerHTML = '<div class="loading-text">Carregando matérias...</div>'
   const periodoNum = parseInt(periodo)
   const isInternato = isNaN(periodoNum)
 
   if (materiasLabel) {
-    materiasLabel.textContent = isInternato
-      ? 'MATÉRIAS · INTERNATO'
-      : `MATÉRIAS · ${periodo}º PERÍODO`
+    materiasLabel.textContent = isInternato ? 'MATÉRIAS · INTERNATO' : `MATÉRIAS · ${periodo}º PERÍODO`
   }
 
   let query = supabase.from('provas').select('materia')
-  if (isInternato) {
-    query = query.gte('periodo', 9)
-  } else {
-    query = query.eq('periodo', periodoNum)
-  }
+  if (isInternato) query = query.gte('periodo', 9)
+  else query = query.eq('periodo', periodoNum)
 
   const { data, error } = await query
 
@@ -168,32 +149,24 @@ async function carregarMaterias(periodo) {
     <div class="materia-card" data-materia="${escapeHtml(mat)}" data-periodo="${escapeHtml(periodo)}">
       <div class="materia-icon">📚</div>
       <div class="materia-nome">${escapeHtml(mat)}</div>
-      <button class="btn-acessar">Acessar <span>→</span></button>
+      <div class="materia-info">Provas disponíveis</div>
+      <button class="btn-acessar"><span>Acessar</span><span>→</span></button>
     </div>
   `).join('')
 
   materiasGrid.querySelectorAll('.materia-card').forEach(card => {
     card.addEventListener('click', () => {
-      const nome = card.dataset.materia
-      const per = parseInt(card.dataset.periodo)
-      abrirModalMateria(nome, per)
+      abrirModalMateria(card.dataset.materia, parseInt(card.dataset.periodo))
     })
   })
 }
 
 // ==========================================
-// CARREGAR PROVAS DA MATÉRIA
+// CARREGAR PROVAS
 // ==========================================
 async function carregarProvas(materia, periodo) {
-  let query = supabase
-    .from('provas')
-    .select('*')
-    .eq('materia', materia)
-    .order('ano')
-
-  if (typeof periodo === 'number' && !isNaN(periodo)) {
-    query = query.eq('periodo', periodo)
-  }
+  let query = supabase.from('provas').select('*').eq('materia', materia).order('ano')
+  if (typeof periodo === 'number' && !isNaN(periodo)) query = query.eq('periodo', periodo)
 
   const { data, error } = await query
 
@@ -215,7 +188,7 @@ async function carregarProvas(materia, periodo) {
   ).join('')
 
   modalSubject.innerHTML = `
-    <div style="font-size:14px;margin-bottom:16px;color:var(--text-muted)">Escolha a prova:</div>
+    <div style="font-size:14px;margin-bottom:16px;color:var(--muted)">Escolha a prova:</div>
     ${lista}
   `
 
@@ -235,7 +208,7 @@ async function carregarProvas(materia, periodo) {
 const acaoBanco = document.getElementById('acao-banco')
 if (acaoBanco) {
   acaoBanco.addEventListener('click', () => {
-    document.getElementById('sec-periodos')?.scrollIntoView({ behavior: 'smooth' })
+    document.getElementById('periodos')?.scrollIntoView({ behavior: 'smooth' })
   })
 }
 
@@ -243,30 +216,5 @@ const acaoSimulado = document.getElementById('acao-simulado')
 if (acaoSimulado) {
   acaoSimulado.addEventListener('click', () => {
     alert('🚧 Simulados personalizados em breve!')
-  })
-}
-
-// ==========================================
-// BOTÕES DO RODAPÉ
-// ==========================================
-document.querySelectorAll('.footer-link').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const texto = btn.textContent.trim()
-    if (texto === 'Sobre') {
-      abrirModalSobre()
-    } else if (texto === 'Apoie') {
-      const apoieBtn = document.querySelector('.nav-apoie')
-      if (apoieBtn) apoieBtn.click()
-    } else if (texto === 'Contato') {
-      window.location.href = 'mailto:filipenqs@hotmail.com'
-    }
-  })
-})
-
-// "Começar a estudar" → scroll para períodos
-const heroBtn = document.querySelector('.hero-btns .btn-primary')
-if (heroBtn) {
-  heroBtn.addEventListener('click', () => {
-    document.getElementById('sec-periodos')?.scrollIntoView({ behavior: 'smooth' })
   })
 }
