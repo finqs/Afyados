@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://omngwhdstrgnsbjonahc.supabase.co; img-src 'self' data:;" />
   <title>MedFlow.AI · Prova</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -260,7 +261,7 @@
 <body>
 
   <nav class="prova-nav">
-    <button class="btn btn--ghost" id="btn-inicio" onclick="confirmarSaida()">← Início</button>
+    <button class="btn btn--ghost" id="btn-inicio">← Início</button>
     <div id="prova-titulo" class="prova-nav-titulo">SOI 1 · 2023.1</div>
     <div class="prova-timer" id="timer">--:--</div>
   </nav>
@@ -291,14 +292,14 @@
       <div class="config-opcoes">
         <div style="font-size:0.72rem;font-weight:700;letter-spacing:3px;color:var(--blue-neon);margin-bottom:4px;">QUANDO MOSTRAR GABARITO?</div>
         <div class="config-grid">
-          <button class="config-btn active" id="cfg-apos-responder" onclick="selecionarModo('apos')">
+          <button class="config-btn active" id="cfg-apos-responder" data-modo="apos">
             <span>⚡</span>
             <div>
               <div class="config-btn-title">Após responder</div>
               <div class="config-btn-desc">Ver gabarito logo após cada questão</div>
             </div>
           </button>
-          <button class="config-btn" id="cfg-no-final" onclick="selecionarModo('final')">
+          <button class="config-btn" id="cfg-no-final" data-modo="final">
             <span>🏁</span>
             <div>
               <div class="config-btn-title">Apenas no final</div>
@@ -320,7 +321,7 @@
           <div class="config-toggle-label" style="margin-bottom:8px;font-size:0.88rem;">Tempo total (minutos)</div>
           <div class="timer-slider-row">
             <span id="timer-valor">100</span> min
-            <input type="range" id="cfg-tempo" min="10" max="180" value="100" oninput="document.getElementById('timer-valor').textContent=this.value">
+            <input type="range" id="cfg-tempo" min="10" max="180" value="100">
           </div>
         </div>
       </div>

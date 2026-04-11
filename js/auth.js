@@ -2,6 +2,14 @@ import { supabase } from './supabase.js'
 
 const authError = document.getElementById('auth-error')
 
+function validarSenha(senha) {
+  if (senha.length < 8) return 'A senha deve ter no minimo 8 caracteres.'
+  if (!/[A-Z]/.test(senha)) return 'A senha deve conter pelo menos uma letra maiuscula.'
+  if (!/[a-z]/.test(senha)) return 'A senha deve conter pelo menos uma letra minuscula.'
+  if (!/[0-9]/.test(senha)) return 'A senha deve conter pelo menos um numero.'
+  return null
+}
+
 // LOGIN
 const btnLogin = document.getElementById('btn-login')
 if (btnLogin) {
@@ -43,8 +51,9 @@ if (btnCadastro) {
       return
     }
 
-    if (senha.length < 6) {
-      authError.textContent = 'A senha deve ter no mínimo 6 caracteres.'
+    const erroSenha = validarSenha(senha)
+    if (erroSenha) {
+      authError.textContent = erroSenha
       return
     }
 
