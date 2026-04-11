@@ -22,7 +22,6 @@ async function init() {
 }
 
 async function carregarDados(userId) {
-  // Busca tentativas de exame finalizadas via join (muito mais rápido)
   const { data: attempts } = await supabase
     .from('exam_attempts')
     .select(`
@@ -51,7 +50,6 @@ async function carregarDados(userId) {
     return
   }
 
-  // Estatísticas gerais
   const totalQuestoes = attempts.reduce((acc, a) => acc + a.total, 0)
   const totalAcertos = attempts.reduce((acc, a) => acc + a.score, 0)
   const percentGeral = totalQuestoes > 0 ? Math.round((totalAcertos / totalQuestoes) * 100) : 0
@@ -60,7 +58,6 @@ async function carregarDados(userId) {
   document.getElementById('stat-acertos').textContent = percentGeral + '%'
   document.getElementById('stat-provas').textContent = attempts.length
 
-  // Agrupamento por matéria
   const materiaMap = {}
   attempts.forEach(a => {
     const mat = a.provas?.materia || 'Outros'
@@ -68,21 +65,20 @@ async function carregarDados(userId) {
     materiaMap[mat].score += a.score
     materiaMap[mat].total += a.total
   })
-  
+
   document.getElementById('stat-materias').textContent = Object.keys(materiaMap).length
 
-  // Histórico Formatado (já vêm ordenado por data descendente)
+  // Histórico
   const lista = document.getElementById('historico-lista')
   lista.innerHTML = attempts.map(p => {
     const percent = p.total > 0 ? Math.round((p.score / p.total) * 100) : 0
-    const cor = percent >= 70 ? '#4ade80' : percent >= 50 ? 'var(--accent)' : '#f87171'
+    const cor = percent >= 70 ? '#4ade80' : percent >= 50 ? 'var(--blue-neon)' : '#f87171'
     const dataStr = new Date(p.created_at).toLocaleDateString('pt-BR')
     const mat = p.provas?.materia || 'Prova'
     const anoSem = p.provas ? `${p.provas.ano}.${p.provas.semestre}` : ''
-    
     return `
       <div class="historico-item">
-        <div class="historico-info">
+        <div>
           <div class="historico-materia">${mat} · ${anoSem}</div>
           <div class="historico-data">${dataStr} · ${p.total} questões</div>
         </div>
@@ -95,10 +91,10 @@ async function carregarDados(userId) {
   const materiaLista = document.getElementById('materias-lista')
   materiaLista.innerHTML = Object.entries(materiaMap).map(([nome, dados]) => {
     const percent = dados.total > 0 ? Math.round((dados.score / dados.total) * 100) : 0
-    const cor = percent >= 70 ? '#4ade80' : percent >= 50 ? 'var(--accent)' : '#f87171'
+    const cor = percent >= 70 ? '#4ade80' : percent >= 50 ? '#38bdf8' : '#f87171'
     return `
       <div class="materia-item">
-        <div class="materia-nome">${nome}</div>
+        <div class="materia-nome-perf">${nome}</div>
         <div class="materia-barra-bg">
           <div class="materia-barra-fill" style="width:${percent}%;background:${cor}"></div>
         </div>
@@ -107,32 +103,24 @@ async function carregarDados(userId) {
     `
   }).join('')
 
-  // Prepara dados pro Gráfico Chart.js
-  const chartData = attempts.map(p => ({
+  renderGrafico(attempts.map(p => ({
     materia: p.provas?.materia || 'Outros',
     ano: p.provas?.ano || '',
     semestre: p.provas?.semestre || '',
     acertos: p.score,
     total: p.total
-  }))
-
-  // Revertendo array para mostrar no gráfico da mais antiga pra mais nova
-  renderGrafico(chartData.reverse())
+  })).reverse())
 }
 
 let chartInstance = null
 
 function renderGrafico(provas) {
   const ctx = document.getElementById('chart-materias').getContext('2d')
-  
-  if (chartInstance) {
-    chartInstance.destroy()
-  }
+  if (chartInstance) chartInstance.destroy()
 
   const labels = provas.map(p => `${p.materia} ${p.ano}.${p.semestre}`)
-
   const valores = provas.map(p => Math.round((p.acertos / p.total) * 100))
-  const cores = valores.map(v => v >= 70 ? '#4ade80' : v >= 50 ? '#2d7ef7' : '#f87171')
+  const cores = valores.map(v => v >= 70 ? '#4ade80' : v >= 50 ? '#38bdf8' : '#f87171')
 
   chartInstance = new Chart(ctx, {
     type: 'bar',
@@ -152,13 +140,12 @@ function renderGrafico(provas) {
       plugins: { legend: { display: false } },
       scales: {
         y: {
-          min: 0,
-          max: 100,
-          ticks: { color: '#5a6a84', callback: val => val + '%' },
-          grid: { color: 'rgba(255,255,255,0.04)' }
+          min: 0, max: 100,
+          ticks: { color: '#8899b0', callback: val => val + '%' },
+          grid: { color: 'rgba(56,189,248,0.06)' }
         },
         x: {
-          ticks: { color: '#5a6a84' },
+          ticks: { color: '#8899b0' },
           grid: { display: false }
         }
       }

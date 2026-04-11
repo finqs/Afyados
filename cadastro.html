@@ -1,56 +1,111 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MedFlow.AI · Cadastro</title>
-  <meta name="description" content="Crie sua conta gratuita no MedFlow.AI e comece a estudar medicina com questões e simulados.">
-  <script src="js/tema.js"></script>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/medbase.css" />
+  <style>
+    .auth-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+    }
+    .auth-orb-1 { position: absolute; width: 400px; height: 400px; background: rgba(59,130,246,0.1); border-radius: 50%; filter: blur(100px); top: -100px; left: -100px; pointer-events: none; }
+    .auth-orb-2 { position: absolute; width: 300px; height: 300px; background: rgba(6,182,212,0.08); border-radius: 50%; filter: blur(100px); bottom: -80px; right: -80px; pointer-events: none; }
+    .auth-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-xl);
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5), var(--glow-blue);
+    }
+    .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+    .auth-logo-icon { font-size: 1.1rem; color: var(--blue-neon); filter: drop-shadow(0 0 8px var(--blue-neon)); }
+    .auth-logo-text { font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; color: var(--white); }
+    .auth-title { font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; color: var(--white); margin-bottom: 8px; letter-spacing: -0.03em; }
+    .auth-sub { font-size: 0.9rem; color: var(--muted); margin-bottom: 32px; }
+    .auth-form { display: flex; flex-direction: column; gap: 16px; }
+    .input-group { display: flex; flex-direction: column; gap: 6px; }
+    .input-label { font-size: 0.82rem; font-weight: 500; color: var(--muted); }
+    .input-field {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      color: var(--white);
+      font-family: var(--font-body);
+      transition: var(--transition);
+      outline: none;
+      width: 100%;
+    }
+    .input-field:focus { border-color: var(--border-glow); background: rgba(56,189,248,0.04); box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+    .input-field::placeholder { color: var(--muted-dim); }
+    .btn-auth {
+      background: linear-gradient(135deg, var(--blue-main), var(--cyan));
+      color: white;
+      border: none;
+      border-radius: 100px;
+      padding: 13px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: var(--transition);
+      margin-top: 4px;
+    }
+    .btn-auth:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(59,130,246,0.4); }
+    .auth-switch { font-size: 0.85rem; color: var(--muted); text-align: center; }
+    .auth-link { color: var(--blue-neon); font-weight: 500; transition: var(--transition); }
+    .auth-link:hover { color: var(--cyan); }
+    .auth-error { font-size: 0.82rem; color: #f87171; text-align: center; min-height: 20px; }
+    .auth-divider { display: flex; align-items: center; gap: 12px; color: var(--muted-dim); font-size: 0.78rem; }
+    .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    @media (max-width: 480px) { .auth-card { padding: 32px 24px; } }
+  </style>
 </head>
 <body>
-
-  <nav class="navbar">
-    <div></div>
-    <div class="logo">Med<b>Flow</b>.AI</div>
-    <div class="tog-wrap" id="tog-wrap">
-      <div class="tog">
-        <div class="knob">
-          <div class="dots">
-            <div class="dot"></div><div class="dot"></div>
-            <div class="dot"></div><div class="dot"></div>
-          </div>
-        </div>
-        <div class="cld"></div>
-      </div>
-    </div>
-  </nav>
-
-  <main class="auth-main">
+  <div class="auth-wrap">
+    <div class="auth-orb-1"></div>
+    <div class="auth-orb-2"></div>
     <div class="auth-card">
-      <h2 class="auth-title">Criar conta</h2>
-      <p class="auth-sub">Junte-se à comunidade MedFlow.AI</p>
-
+      <a href="index.html" class="auth-logo">
+        <span class="auth-logo-icon">✦</span>
+        <span class="auth-logo-text">MedFlow.AI</span>
+      </a>
+      <h1 class="auth-title">Criar conta grátis</h1>
+      <p class="auth-sub">Junte-se a milhares de estudantes de medicina</p>
       <div class="auth-form">
         <div class="input-group">
           <label class="input-label" for="nome">Nome completo</label>
-          <input type="text" id="nome" class="input-field" placeholder="Seu nome">
+          <input type="text" id="nome" class="input-field" placeholder="Seu nome" />
         </div>
         <div class="input-group">
           <label class="input-label" for="email">E-mail</label>
-          <input type="email" id="email" class="input-field" placeholder="seu@email.com">
+          <input type="email" id="email" class="input-field" placeholder="seu@email.com" />
         </div>
         <div class="input-group">
           <label class="input-label" for="senha">Senha</label>
-          <input type="password" id="senha" class="input-field" placeholder="Mínimo 6 caracteres">
+          <input type="password" id="senha" class="input-field" placeholder="Mínimo 6 caracteres" />
         </div>
-        <button class="btn-primary" id="btn-cadastro">Criar conta</button>
-        <p class="auth-switch">Já tem conta? <a href="login.html" class="auth-link">Entrar</a></p>
+        <button class="btn-auth" id="btn-cadastro">Criar conta</button>
         <p class="auth-error" id="auth-error"></p>
+        <div class="auth-divider">ou</div>
+        <p class="auth-switch">Já tem conta? <a href="login.html" class="auth-link">Entrar</a></p>
       </div>
     </div>
-  </main>
-
+  </div>
   <script type="module" src="js/auth.js"></script>
 </body>
 </html>

@@ -1,86 +1,167 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MedFlow.AI · Perfil</title>
-  <meta name="description" content="Veja seu desempenho, histórico de provas e estatísticas de estudo no MedFlow.AI.">
-  <script src="js/tema.js"></script>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/medbase.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    .perfil-header-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      padding: 18px 0;
+      background: rgba(6,9,16,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .perfil-header-nav .container { display: flex; align-items: center; justify-content: space-between; }
+    .perfil-main { max-width: 900px; margin: 0 auto; padding: 100px 24px 80px; display: flex; flex-direction: column; gap: 24px; }
+
+    .perfil-hero {
+      background: var(--bg-card);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-xl);
+      padding: 36px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--glow-blue);
+    }
+    .perfil-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(56,189,248,0.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .perfil-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue-main), var(--cyan));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display);
+      font-size: 28px; font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+      box-shadow: 0 0 24px rgba(59,130,246,0.4);
+    }
+    .perfil-info { flex: 1; }
+    .perfil-nome { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; color: var(--white); letter-spacing: -0.03em; margin-bottom: 4px; }
+    .perfil-email { font-size: 0.88rem; color: var(--muted); }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      text-align: center;
+      transition: var(--transition);
+    }
+    .stat-card:hover { border-color: var(--border-glow); box-shadow: var(--glow-blue); transform: translateY(-2px); }
+    .stat-valor { font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; color: var(--white); letter-spacing: -1px; margin-bottom: 8px; display: block; }
+    .stat-valor.accent { background: linear-gradient(135deg, var(--blue-neon), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .stat-label { font-size: 0.78rem; color: var(--muted); font-weight: 500; }
+
+    .perfil-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+    }
+    .perfil-card-label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--blue-neon); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+    .perfil-card-label::before { content: ''; display: block; width: 20px; height: 1px; background: var(--blue-neon); }
+
+    .chart-container { height: 260px; position: relative; margin-top: 16px; }
+
+    .historico-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      transition: var(--transition);
+    }
+    .historico-item:last-child { border-bottom: none; }
+    .historico-item:hover { padding-left: 8px; }
+    .historico-materia { font-size: 0.9rem; font-weight: 600; color: var(--white); margin-bottom: 3px; }
+    .historico-data { font-size: 0.78rem; color: var(--muted); }
+    .historico-score { font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; }
+
+    .materia-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .materia-item:last-child { border-bottom: none; }
+    .materia-nome-perf { font-size: 0.88rem; font-weight: 600; color: var(--white); min-width: 80px; }
+    .materia-barra-bg { flex: 1; height: 6px; background: var(--bg-surface); border-radius: 50px; overflow: hidden; }
+    .materia-barra-fill { height: 100%; border-radius: 50px; transition: width 0.6s ease; }
+    .materia-percent { font-size: 0.82rem; font-weight: 700; min-width: 40px; text-align: right; }
+
+    .loading-text { text-align: center; color: var(--muted); padding: 40px; }
+
+    @media (max-width: 700px) { .stats-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 480px) { .perfil-hero { flex-direction: column; text-align: center; } }
+  </style>
 </head>
 <body>
 
-  <nav class="navbar">
-    <a href="index.html" class="nav-btn">← Início</a>
-    <div class="logo">Med<b>Flow</b>.AI</div>
-    <div class="nav-right">
-      <div class="tog-wrap" id="tog-wrap">
-        <div class="tog">
-          <div class="knob">
-            <div class="dots">
-              <div class="dot"></div><div class="dot"></div>
-              <div class="dot"></div><div class="dot"></div>
-            </div>
-          </div>
-          <div class="cld"></div>
-        </div>
-      </div>
-      <button class="nav-btn nav-apoie" id="btn-sair">Sair</button>
+  <nav class="perfil-header-nav">
+    <div class="container">
+      <a href="index.html" class="logo">
+        <span class="logo__icon">✦</span>
+        <span class="logo__text">MedFlow.AI</span>
+      </a>
+      <button class="btn btn--outline" id="btn-sair">Sair</button>
     </div>
   </nav>
 
   <main class="perfil-main">
 
-    <!-- HEADER DO PERFIL -->
-    <div class="perfil-header">
+    <div class="perfil-hero">
       <div class="perfil-avatar" id="perfil-avatar">?</div>
-      <div>
+      <div class="perfil-info">
         <div class="perfil-nome" id="perfil-nome">Carregando...</div>
         <div class="perfil-email" id="perfil-email"></div>
       </div>
     </div>
 
-    <!-- CARDS DE ESTATÍSTICAS -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-valor" id="stat-total">--</div>
+        <span class="stat-valor" id="stat-total">--</span>
         <div class="stat-label">Questões respondidas</div>
       </div>
       <div class="stat-card">
-        <div class="stat-valor accent" id="stat-acertos">--%</div>
+        <span class="stat-valor accent" id="stat-acertos">--%</span>
         <div class="stat-label">Taxa de acertos</div>
       </div>
       <div class="stat-card">
-        <div class="stat-valor" id="stat-provas">--</div>
+        <span class="stat-valor" id="stat-provas">--</span>
         <div class="stat-label">Provas realizadas</div>
       </div>
       <div class="stat-card">
-        <div class="stat-valor" id="stat-materias">--</div>
+        <span class="stat-valor" id="stat-materias">--</span>
         <div class="stat-label">Matérias estudadas</div>
       </div>
     </div>
 
-    <!-- GRÁFICO DE DESEMPENHO POR MATÉRIA -->
     <div class="perfil-card">
-      <div class="sobre-label">DESEMPENHO POR MATÉRIA</div>
+      <div class="perfil-card-label">Desempenho por matéria</div>
       <div class="chart-container">
         <canvas id="chart-materias"></canvas>
       </div>
     </div>
 
-    <!-- PROVAS REALIZADAS -->
     <div class="perfil-card">
-      <div class="sobre-label">HISTÓRICO DE PROVAS</div>
-      <div id="historico-lista" style="margin-top:16px">
+      <div class="perfil-card-label">Histórico de provas</div>
+      <div id="historico-lista">
         <div class="loading-text">Carregando...</div>
       </div>
     </div>
 
-    <!-- ACERTOS POR MATÉRIA -->
     <div class="perfil-card">
-      <div class="sobre-label">ACERTOS POR MATÉRIA</div>
-      <div id="materias-lista" style="margin-top:16px"></div>
+      <div class="perfil-card-label">Acertos por matéria</div>
+      <div id="materias-lista"></div>
     </div>
 
   </main>
