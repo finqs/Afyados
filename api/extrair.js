@@ -37,12 +37,13 @@ module.exports = async function handler(req, res) {
             },
             {
               type: 'text',
-              text: `Extraia TODAS as questões de múltipla escolha desta prova de medicina e retorne APENAS um JSON válido, sem texto antes ou depois, sem markdown, sem backticks.
+              text: `Extraia TODAS as questões desta prova de medicina e retorne APENAS um JSON válido, sem texto antes ou depois, sem markdown, sem backticks.
 
 O formato deve ser exatamente este:
 [
   {
     "numero": 1,
+    "tipo": "multipla_escolha",
     "enunciado": "texto completo do enunciado",
     "alternativa_a": "texto da alternativa A",
     "alternativa_b": "texto da alternativa B",
@@ -55,11 +56,11 @@ O formato deve ser exatamente este:
 ]
 
 Regras:
-- Inclua apenas questões de múltipla escolha
-- Ignore questões discursivas
-- Extraia todas as questões sem exceção
-- O gabarito deve ser apenas a letra: A, B, C, D ou E
-- Se não houver comentário, deixe o campo vazio ""
+- Para questões de múltipla escolha: tipo = "multipla_escolha", gabarito = letra (A, B, C, D ou E)
+- Para questões dissertativas ou abertas: tipo = "aberta", gabarito = texto completo da resposta esperada, alternativas = strings vazias ""
+- Extraia TODAS as questões sem exceção, incluindo as abertas
+- O gabarito de múltipla escolha deve ser apenas a letra
+- Se não houver comentário, use ""
 - Retorne somente o array JSON válido`
             }
           ]
