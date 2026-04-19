@@ -18,14 +18,33 @@
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
     }
-    .prova-nav-titulo { font-size: 0.9rem; font-weight: 600; color: var(--white); }
-    .prova-timer { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; color: var(--blue-neon); min-width: 80px; text-align: right; }
+    .prova-nav-titulo { font-size: 0.9rem; font-weight: 600; color: var(--white); white-space: nowrap; }
+    .prova-nav-questao {
+      font-size: 0.82rem; color: var(--muted);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 4px 14px;
+      white-space: nowrap;
+    }
+    .prova-nav-questao span { color: var(--blue-neon); font-weight: 700; }
+    .prova-timer { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; color: var(--blue-neon); min-width: 72px; text-align: right; }
     .prova-timer.urgente { color: #f87171; }
 
     .progress-bar { position: fixed; top: 57px; left: 0; right: 0; height: 2px; background: var(--bg-surface); z-index: 999; }
     .progress-fill { height: 100%; background: linear-gradient(90deg, var(--blue-main), var(--cyan)); transition: width 0.3s ease; width: 0%; }
 
-    .questao-nav { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 24px; max-width: 900px; margin: 0 auto; }
+    .questao-nav-wrap {
+      position: fixed;
+      top: 59px;
+      left: 0; right: 0;
+      z-index: 998;
+      background: rgba(6,9,16,0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+    }
+    .questao-nav { display: flex; flex-wrap: wrap; gap: 6px; max-width: 860px; margin: 0 auto; }
     .questao-bubble {
       width: 34px; height: 34px; border-radius: 50%;
       border: 1px solid var(--border);
@@ -43,7 +62,7 @@
     .questao-bubble.errou { border-color: #f87171; background: rgba(248,113,113,0.1); color: #f87171; }
     .questao-bubble.respondida { border-color: var(--muted-dim); color: var(--white); }
 
-    .prova-main { max-width: 860px; margin: 0 auto; padding: 100px 24px 120px; }
+    .prova-main { max-width: 860px; margin: 0 auto; padding: 160px 24px 120px; }
     .prova-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -263,14 +282,19 @@
   <nav class="prova-nav">
     <button class="btn btn--ghost" id="btn-inicio">← Início</button>
     <div id="prova-titulo" class="prova-nav-titulo">SOI 1 · 2023.1</div>
-    <div class="prova-timer" id="timer">--:--</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="prova-nav-questao">Questão <span id="nav-questao-atual">1</span>/<span id="nav-questao-total">?</span></div>
+      <div class="prova-timer" id="timer">--:--</div>
+    </div>
   </nav>
 
   <div class="progress-bar">
     <div class="progress-fill" id="progress-fill"></div>
   </div>
 
-  <div class="questao-nav" id="questao-nav"></div>
+  <div class="questao-nav-wrap">
+    <div class="questao-nav" id="questao-nav"></div>
+  </div>
 
   <main class="prova-main">
     <div class="prova-card" id="prova-card">

@@ -48,6 +48,8 @@ async function carregarQuestoes() {
   }
 
   questoes = data
+  const navTotal = document.getElementById('nav-questao-total')
+  if (navTotal) navTotal.textContent = questoes.length
   renderBubbles()
 }
 
@@ -171,6 +173,9 @@ function renderQuestao() {
   const respondida = respostas[questaoAtual] !== undefined
   const percentual = ((questaoAtual + 1) / questoes.length) * 100
   document.getElementById('progress-fill').style.width = percentual + '%'
+
+  const navAtual = document.getElementById('nav-questao-atual')
+  if (navAtual) navAtual.textContent = questaoAtual + 1
 
   const isAberta = q.tipo === 'aberta'
   let conteudoQuestao = ''
