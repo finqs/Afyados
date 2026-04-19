@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://omngwhdstrgnsbjonahc.supabase.co; img-src 'self' data:;" />
   <title>MedFlow.AI · Prova</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,7 +17,6 @@
       backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
-      gap: 16px;
     }
     .prova-nav-titulo { font-size: 0.9rem; font-weight: 600; color: var(--white); white-space: nowrap; }
     .prova-nav-questao {
@@ -34,7 +34,6 @@
     .progress-bar { position: fixed; top: 57px; left: 0; right: 0; height: 2px; background: var(--bg-surface); z-index: 999; }
     .progress-fill { height: 100%; background: linear-gradient(90deg, var(--blue-main), var(--cyan)); transition: width 0.3s ease; width: 0%; }
 
-    /* MENU DE QUESTÕES FIXO */
     .questao-nav-wrap {
       position: fixed;
       top: 59px;
@@ -45,31 +44,20 @@
       border-bottom: 1px solid var(--border);
       padding: 10px 24px;
     }
-    .questao-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      max-width: 860px;
-      margin: 0 auto;
-    }
+    .questao-nav { display: flex; flex-wrap: wrap; gap: 6px; max-width: 860px; margin: 0 auto; }
     .questao-bubble {
-      width: 32px; height: 32px; border-radius: 50%;
+      width: 34px; height: 34px; border-radius: 50%;
       border: 1px solid var(--border);
       background: var(--bg-card);
       color: var(--muted);
-      font-size: 0.75rem; font-weight: 600;
+      font-size: 0.78rem; font-weight: 600;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: var(--transition);
       font-family: var(--font-body);
-      flex-shrink: 0;
     }
     .questao-bubble:hover { border-color: var(--border-glow); color: var(--blue-neon); }
-    .questao-bubble.atual {
-      background: linear-gradient(135deg, var(--blue-main), var(--cyan));
-      border-color: transparent; color: white;
-      box-shadow: 0 4px 12px rgba(59,130,246,0.4);
-    }
+    .questao-bubble.atual { background: linear-gradient(135deg, var(--blue-main), var(--cyan)); border-color: transparent; color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
     .questao-bubble.acertou { border-color: #4ade80; background: rgba(74,222,128,0.1); color: #4ade80; }
     .questao-bubble.errou { border-color: #f87171; background: rgba(248,113,113,0.1); color: #f87171; }
     .questao-bubble.respondida { border-color: var(--muted-dim); color: var(--white); }
@@ -104,8 +92,7 @@
     .alternativa-btn.correta { border-color: #4ade80; background: rgba(74,222,128,0.08); color: #4ade80; }
     .alternativa-btn.errada { border-color: #f87171; background: rgba(248,113,113,0.08); color: #f87171; }
     .alternativa-letra { font-weight: 800; color: var(--blue-neon); min-width: 24px; font-size: 0.95rem; }
-    .alternativa-btn.correta .alternativa-letra,
-    .alternativa-btn.errada .alternativa-letra { color: inherit; }
+    .alternativa-btn.correta .alternativa-letra, .alternativa-btn.errada .alternativa-letra { color: inherit; }
 
     .gabarito-box {
       margin-top: 20px;
@@ -139,7 +126,8 @@
       color: var(--muted);
       padding: 10px 20px;
       border-radius: 100px;
-      font-size: 0.88rem; font-weight: 500;
+      font-size: 0.88rem;
+      font-weight: 500;
       cursor: pointer;
       font-family: var(--font-body);
       transition: var(--transition);
@@ -286,14 +274,13 @@
       .aberta-comparacao { grid-template-columns: 1fr; }
       .autoavaliacao-btns { grid-template-columns: repeat(2,1fr); }
       .questao-bubble { width: 28px; height: 28px; font-size: 0.7rem; }
-      .prova-nav-titulo { display: none; }
     }
   </style>
 </head>
 <body>
 
   <nav class="prova-nav">
-    <button class="btn btn--ghost" id="btn-inicio" onclick="confirmarSaida()">← Início</button>
+    <button class="btn btn--ghost" id="btn-inicio">← Início</button>
     <div id="prova-titulo" class="prova-nav-titulo">SOI 1 · 2023.1</div>
     <div style="display:flex;align-items:center;gap:12px">
       <div class="prova-nav-questao">Questão <span id="nav-questao-atual">1</span>/<span id="nav-questao-total">?</span></div>
@@ -305,7 +292,6 @@
     <div class="progress-fill" id="progress-fill"></div>
   </div>
 
-  <!-- MENU DE QUESTÕES FIXO -->
   <div class="questao-nav-wrap">
     <div class="questao-nav" id="questao-nav"></div>
   </div>
@@ -330,14 +316,14 @@
       <div class="config-opcoes">
         <div style="font-size:0.72rem;font-weight:700;letter-spacing:3px;color:var(--blue-neon);margin-bottom:4px;">QUANDO MOSTRAR GABARITO?</div>
         <div class="config-grid">
-          <button class="config-btn active" id="cfg-apos-responder" onclick="selecionarModo('apos')">
+          <button class="config-btn active" id="cfg-apos-responder" data-modo="apos">
             <span>⚡</span>
             <div>
               <div class="config-btn-title">Após responder</div>
               <div class="config-btn-desc">Ver gabarito logo após cada questão</div>
             </div>
           </button>
-          <button class="config-btn" id="cfg-no-final" onclick="selecionarModo('final')">
+          <button class="config-btn" id="cfg-no-final" data-modo="final">
             <span>🏁</span>
             <div>
               <div class="config-btn-title">Apenas no final</div>
@@ -359,7 +345,7 @@
           <div class="config-toggle-label" style="margin-bottom:8px;font-size:0.88rem;">Tempo total (minutos)</div>
           <div class="timer-slider-row">
             <span id="timer-valor">100</span> min
-            <input type="range" id="cfg-tempo" min="10" max="180" value="100" oninput="document.getElementById('timer-valor').textContent=this.value">
+            <input type="range" id="cfg-tempo" min="10" max="180" value="100">
           </div>
         </div>
       </div>

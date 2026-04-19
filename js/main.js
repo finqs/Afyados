@@ -9,6 +9,8 @@ const modalSobreClose = document.getElementById('modal-sobre-close')
 const pillsContainer = document.getElementById('pills-periodos')
 const materiasGrid = document.getElementById('materias-grid')
 const materiasLabel = document.getElementById('materias-label')
+const modalActions = document.querySelector('#modal .modal-actions')
+const modalActionsOriginal = modalActions ? modalActions.innerHTML : ''
 
 // ==========================================
 // MODAL MATÉRIA
@@ -57,6 +59,7 @@ document.addEventListener('keydown', (e) => {
 function closeModal() {
   modal.classList.remove('active')
   document.body.style.overflow = ''
+  if (modalActions) modalActions.innerHTML = modalActionsOriginal
 }
 
 // ==========================================
@@ -203,18 +206,20 @@ async function carregarProvas(materia, periodo) {
     return
   }
 
+  modalSubject.textContent = materia
+
   const lista = data.map(p =>
-    `<button class="btn-primary" style="margin-bottom:8px;width:100%" data-pid="${p.id}" data-mat="${encodeURIComponent(p.materia)}" data-ano="${p.ano}" data-sem="${p.semestre}">
+    `<button class="btn btn--primary" style="margin-bottom:8px;width:100%;justify-content:center;" data-pid="${p.id}" data-mat="${encodeURIComponent(p.materia)}" data-ano="${p.ano}" data-sem="${p.semestre}">
       ${escapeHtml(p.materia)} · ${escapeHtml(String(p.ano))}.${escapeHtml(String(p.semestre))}
     </button>`
   ).join('')
 
-  modalSubject.innerHTML = `
-    <div style="font-size:14px;margin-bottom:16px;color:var(--muted)">Escolha a prova:</div>
-    ${lista}
+  modalActions.innerHTML = `
+    <div style="grid-column:1/-1;font-size:0.82rem;color:var(--muted);text-align:center;margin-bottom:4px;">Escolha a prova:</div>
+    <div style="grid-column:1/-1;display:flex;flex-direction:column;">${lista}</div>
   `
 
-  modalSubject.querySelectorAll('[data-pid]').forEach(btn => {
+  modalActions.querySelectorAll('[data-pid]').forEach(btn => {
     btn.addEventListener('click', () => {
       window.location.href = `prova.html?prova_id=${btn.dataset.pid}&materia=${btn.dataset.mat}&ano=${btn.dataset.ano}&semestre=${btn.dataset.sem}`
     })

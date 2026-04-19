@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js'
+import { escapeHtml } from './utils/utils.js'
 
 async function init() {
   const { data: { session } } = await supabase.auth.getSession()
@@ -79,8 +80,8 @@ async function carregarDados(userId) {
     return `
       <div class="historico-item">
         <div>
-          <div class="historico-materia">${mat} · ${anoSem}</div>
-          <div class="historico-data">${dataStr} · ${p.total} questões</div>
+          <div class="historico-materia">${escapeHtml(mat)} · ${escapeHtml(anoSem)}</div>
+          <div class="historico-data">${escapeHtml(dataStr)} · ${p.total} questões</div>
         </div>
         <div class="historico-score" style="color:${cor}">${p.score}/${p.total}</div>
       </div>
@@ -94,7 +95,7 @@ async function carregarDados(userId) {
     const cor = percent >= 70 ? '#4ade80' : percent >= 50 ? '#38bdf8' : '#f87171'
     return `
       <div class="materia-item">
-        <div class="materia-nome-perf">${nome}</div>
+        <div class="materia-nome-perf">${escapeHtml(nome)}</div>
         <div class="materia-barra-bg">
           <div class="materia-barra-fill" style="width:${percent}%;background:${cor}"></div>
         </div>

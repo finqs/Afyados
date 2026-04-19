@@ -1,6 +1,8 @@
 import { supabase } from './supabase.js'
 import { escapeHtml } from './utils/utils.js'
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // Estado da prova
 let questoes = []
 let questaoAtual = 0
@@ -15,18 +17,24 @@ let provaIniciada = false
 let provaId = null
 let attemptId = null
 
-// Pega parâmetros da URL
+// Pega parametros da URL
 const params = new URLSearchParams(window.location.search)
 provaId = params.get('prova_id')
 const materia = params.get('materia') || 'Prova'
 const ano = params.get('ano') || ''
 const semestre = params.get('semestre') || ''
 
-// Atualiza títulos
-document.getElementById('prova-titulo').textContent = `${materia} · ${ano}.${semestre}`
-document.getElementById('config-titulo').textContent = `${materia} · ${ano}.${semestre}`
+// Valida UUID do prova_id
+if (!provaId || !UUID_REGEX.test(provaId)) {
+  document.getElementById('prova-card').innerHTML = '<div class="loading-text">Prova nao encontrada.</div>'
+} else {
+  // Atualiza titulos
+  document.getElementById('prova-titulo').textContent = `${materia} · ${ano}.${semestre}`
+  document.getElementById('config-titulo').textContent = `${materia} · ${ano}.${semestre}`
+  carregarQuestoes()
+}
 
-// Carrega questões
+// Carrega questoes
 async function carregarQuestoes() {
   const { data, error } = await supabase
     .from('questoes')
@@ -35,18 +43,18 @@ async function carregarQuestoes() {
     .order('numero')
 
   if (error || !data || !data.length) {
-    document.getElementById('prova-card').innerHTML = '<div class="loading-text">Erro ao carregar questões.</div>'
+    document.getElementById('prova-card').innerHTML = '<div class="loading-text">Erro ao carregar questoes.</div>'
     return
   }
 
   questoes = data
+  const navTotal = document.getElementById('nav-questao-total')
+  if (navTotal) navTotal.textContent = questoes.length
   renderBubbles()
 }
 
-carregarQuestoes()
-
 // Selecionar modo gabarito
-window.selecionarModo = function(modo) {
+function selecionarModo(modo) {
   modoGabarito = modo
   document.getElementById('cfg-apos-responder').classList.toggle('active', modo === 'apos')
   document.getElementById('cfg-no-final').classList.toggle('active', modo === 'final')
@@ -123,16 +131,41 @@ function renderBubbles() {
         classe += ' respondida'
       }
     }
-    return `<button class="${classe}" onclick="irParaQuestao(${i})">${i + 1}</button>`
+    return `<button class="${classe}" data-questao="${i}">${i + 1}</button>`
   }).join('')
 }
 
-window.irParaQuestao = function(i) {
-  questaoAtual = i
-  renderQuestao()
-}
+// Event delegation for questao-nav bubbles
+document.getElementById('questao-nav').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-questao]')
+  if (btn) {
+    questaoAtual = parseInt(btn.dataset.questao)
+    renderQuestao()
+  }
+})
 
-// Render questão
+// Event delegation for prova-card (responder, ver gabarito, notar aberta)
+document.getElementById('prova-card').addEventListener('click', (e) => {
+  const respBtn = e.target.closest('[data-resposta]')
+  if (respBtn) {
+    responder(respBtn.dataset.resposta)
+    return
+  }
+
+  const gabBtn = e.target.closest('[data-action="ver-gabarito"]')
+  if (gabBtn) {
+    verGabaritoAberta()
+    return
+  }
+
+  const notaBtn = e.target.closest('[data-nota]')
+  if (notaBtn) {
+    notarAberta(notaBtn.dataset.nota)
+    return
+  }
+})
+
+// Render questao
 function renderQuestao() {
   if (!questoes.length) return
 
@@ -140,6 +173,9 @@ function renderQuestao() {
   const respondida = respostas[questaoAtual] !== undefined
   const percentual = ((questaoAtual + 1) / questoes.length) * 100
   document.getElementById('progress-fill').style.width = percentual + '%'
+
+  const navAtual = document.getElementById('nav-questao-atual')
+  if (navAtual) navAtual.textContent = questaoAtual + 1
 
   const isAberta = q.tipo === 'aberta'
   let conteudoQuestao = ''
@@ -155,7 +191,7 @@ function renderQuestao() {
           placeholder="Digite sua resposta aqui..."
           rows="6"
         >${escapeHtml(respostaAluno)}</textarea>
-        <button class="btn-ver-gabarito" onclick="verGabaritoAberta()">Ver gabarito</button>
+        <button class="btn-ver-gabarito" data-action="ver-gabarito">Ver gabarito</button>
       `
     } else {
       conteudoQuestao = `
@@ -171,12 +207,12 @@ function renderQuestao() {
         </div>
         ${q.comentario ? `<div class="gabarito-box acerto"><div>${escapeHtml(q.comentario)}</div></div>` : ''}
         <div class="autoavaliacao">
-          <div class="autoavaliacao-label">Quanto você acertou?</div>
+          <div class="autoavaliacao-label">Quanto voce acertou?</div>
           <div class="autoavaliacao-btns">
-            <button class="btn-nota ${respostas[questaoAtual] === '25' ? 'ativo' : ''}" onclick="notarAberta('25')">25%</button>
-            <button class="btn-nota ${respostas[questaoAtual] === '50' ? 'ativo' : ''}" onclick="notarAberta('50')">50%</button>
-            <button class="btn-nota ${respostas[questaoAtual] === '75' ? 'ativo' : ''}" onclick="notarAberta('75')">75%</button>
-            <button class="btn-nota ${respostas[questaoAtual] === '100' ? 'ativo' : ''}" onclick="notarAberta('100')">100%</button>
+            <button class="btn-nota ${respostas[questaoAtual] === '25' ? 'ativo' : ''}" data-nota="25">25%</button>
+            <button class="btn-nota ${respostas[questaoAtual] === '50' ? 'ativo' : ''}" data-nota="50">50%</button>
+            <button class="btn-nota ${respostas[questaoAtual] === '75' ? 'ativo' : ''}" data-nota="75">75%</button>
+            <button class="btn-nota ${respostas[questaoAtual] === '100' ? 'ativo' : ''}" data-nota="100">100%</button>
           </div>
         </div>
       `
@@ -214,7 +250,7 @@ function renderQuestao() {
             else if (alt.letra === respostas[questaoAtual]) classe += ' errada'
           }
           return `
-            <button class="${classe}" ${respondida ? 'disabled' : ''} onclick="responder('${alt.letra}')">
+            <button class="${classe}" ${respondida ? 'disabled' : ''} data-resposta="${alt.letra}">
               <span class="alternativa-letra">${alt.letra}</span>
               ${escapeHtml(alt.texto)}
             </button>
@@ -234,16 +270,16 @@ function renderQuestao() {
   renderBubbles()
 }
 
-// Responder múltipla escolha
-window.responder = function(letra) {
+// Responder multipla escolha
+function responder(letra) {
   if (respostas[questaoAtual] !== undefined) return
   respostas[questaoAtual] = letra
   salvarResposta(questoes[questaoAtual].id, letra, letra === questoes[questaoAtual].gabarito)
   renderQuestao()
 }
 
-// Questão aberta
-window.verGabaritoAberta = function() {
+// Questao aberta
+function verGabaritoAberta() {
   const textarea = document.getElementById('resposta-aberta')
   const texto = textarea ? textarea.value.trim() : ''
   respostasTexto[questaoAtual] = texto
@@ -251,7 +287,7 @@ window.verGabaritoAberta = function() {
   renderQuestao()
 }
 
-window.notarAberta = function(nota) {
+function notarAberta(nota) {
   respostas[questaoAtual] = nota
   salvarResposta(questoes[questaoAtual].id, nota, parseFloat(nota) / 100)
   renderQuestao()
@@ -269,7 +305,7 @@ async function salvarResposta(questaoId, resposta, acertou) {
   })
 }
 
-// Navegação
+// Navegacao
 document.getElementById('btn-anterior').addEventListener('click', () => {
   if (questaoAtual > 0) { questaoAtual--; renderQuestao() }
 })
@@ -310,9 +346,9 @@ async function finalizarProva() {
   document.getElementById('resultado-score').textContent = `${acertos}/${total}`
   document.getElementById('resultado-percent').textContent = `${percent}%`
   document.getElementById('resultado-msg').textContent =
-    percent >= 70 ? '🎉 Ótimo desempenho!' :
+    percent >= 70 ? '🎉 Otimo desempenho!' :
     percent >= 50 ? '📚 Continue estudando!' :
-    '💪 Não desista, revise o conteúdo!'
+    '💪 Nao desista, revise o conteudo!'
 
   document.getElementById('resultado-grid').innerHTML = questoes.map((q, i) => {
     let classe = 'resultado-item'
@@ -328,10 +364,10 @@ async function finalizarProva() {
   document.getElementById('modal-resultado').classList.add('active')
 }
 
-// Confirmar saída
-window.confirmarSaida = function() {
+// Confirmar saida
+function confirmarSaida() {
   if (provaIniciada && Object.keys(respostas).length > 0) {
-    if (confirm('Deseja sair? Seu progresso será perdido.')) {
+    if (confirm('Deseja sair? Seu progresso sera perdido.')) {
       window.location.href = 'index.html'
     }
   } else {
@@ -339,12 +375,24 @@ window.confirmarSaida = function() {
   }
 }
 
-// Limpar timer ao sair da página
+// Event delegation for config modal buttons
+document.getElementById('modal-config').addEventListener('click', (e) => {
+  const modoBtn = e.target.closest('[data-modo]')
+  if (modoBtn) {
+    selecionarModo(modoBtn.dataset.modo)
+  }
+})
+
+// Expose confirmarSaida for HTML onclick (btn-inicio in prova.html)
+document.getElementById('btn-inicio').addEventListener('click', confirmarSaida)
+
+// Timer slider oninput
+const cfgTempo = document.getElementById('cfg-tempo')
+cfgTempo.addEventListener('input', () => {
+  document.getElementById('timer-valor').textContent = cfgTempo.value
+})
+
+// Limpar timer ao sair da pagina
 window.addEventListener('beforeunload', () => {
   if (intervalTimer) clearInterval(intervalTimer)
 })
-// Atualiza contador na navbar
-  const navAtual = document.getElementById('nav-questao-atual')
-  const navTotal = document.getElementById('nav-questao-total')
-  if (navAtual) navAtual.textContent = questaoAtual + 1
-  if (navTotal) navTotal.textContent = questoes.length
