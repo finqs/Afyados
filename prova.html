@@ -274,7 +274,12 @@
       .aberta-comparacao { grid-template-columns: 1fr; }
       .autoavaliacao-btns { grid-template-columns: repeat(2,1fr); }
       .questao-bubble { width: 28px; height: 28px; font-size: 0.7rem; }
+      /* Config grid: 1 coluna no mobile para evitar quebra de texto */
+      .config-grid { grid-template-columns: 1fr; }
+      .config-btn { flex-direction: row; align-items: flex-start; }
     }
+
+    .resposta-aberta-input { max-height: 320px; }
   </style>
 </head>
 <body>
