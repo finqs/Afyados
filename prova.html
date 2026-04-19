@@ -16,33 +16,65 @@
       backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
+      gap: 16px;
     }
-    .prova-nav-titulo { font-size: 0.9rem; font-weight: 600; color: var(--white); }
-    .prova-timer { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; color: var(--blue-neon); min-width: 80px; text-align: right; }
+    .prova-nav-titulo { font-size: 0.9rem; font-weight: 600; color: var(--white); white-space: nowrap; }
+    .prova-nav-questao {
+      font-size: 0.82rem; color: var(--muted);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 4px 14px;
+      white-space: nowrap;
+    }
+    .prova-nav-questao span { color: var(--blue-neon); font-weight: 700; }
+    .prova-timer { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; color: var(--blue-neon); min-width: 72px; text-align: right; }
     .prova-timer.urgente { color: #f87171; }
 
     .progress-bar { position: fixed; top: 57px; left: 0; right: 0; height: 2px; background: var(--bg-surface); z-index: 999; }
     .progress-fill { height: 100%; background: linear-gradient(90deg, var(--blue-main), var(--cyan)); transition: width 0.3s ease; width: 0%; }
 
-    .questao-nav { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 24px; max-width: 900px; margin: 0 auto; }
+    /* MENU DE QUESTÕES FIXO */
+    .questao-nav-wrap {
+      position: fixed;
+      top: 59px;
+      left: 0; right: 0;
+      z-index: 998;
+      background: rgba(6,9,16,0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+    }
+    .questao-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
     .questao-bubble {
-      width: 34px; height: 34px; border-radius: 50%;
+      width: 32px; height: 32px; border-radius: 50%;
       border: 1px solid var(--border);
       background: var(--bg-card);
       color: var(--muted);
-      font-size: 0.78rem; font-weight: 600;
+      font-size: 0.75rem; font-weight: 600;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: var(--transition);
       font-family: var(--font-body);
+      flex-shrink: 0;
     }
     .questao-bubble:hover { border-color: var(--border-glow); color: var(--blue-neon); }
-    .questao-bubble.atual { background: linear-gradient(135deg, var(--blue-main), var(--cyan)); border-color: transparent; color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
+    .questao-bubble.atual {
+      background: linear-gradient(135deg, var(--blue-main), var(--cyan));
+      border-color: transparent; color: white;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+    }
     .questao-bubble.acertou { border-color: #4ade80; background: rgba(74,222,128,0.1); color: #4ade80; }
     .questao-bubble.errou { border-color: #f87171; background: rgba(248,113,113,0.1); color: #f87171; }
     .questao-bubble.respondida { border-color: var(--muted-dim); color: var(--white); }
 
-    .prova-main { max-width: 860px; margin: 0 auto; padding: 100px 24px 120px; }
+    .prova-main { max-width: 860px; margin: 0 auto; padding: 160px 24px 120px; }
     .prova-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -72,7 +104,8 @@
     .alternativa-btn.correta { border-color: #4ade80; background: rgba(74,222,128,0.08); color: #4ade80; }
     .alternativa-btn.errada { border-color: #f87171; background: rgba(248,113,113,0.08); color: #f87171; }
     .alternativa-letra { font-weight: 800; color: var(--blue-neon); min-width: 24px; font-size: 0.95rem; }
-    .alternativa-btn.correta .alternativa-letra, .alternativa-btn.errada .alternativa-letra { color: inherit; }
+    .alternativa-btn.correta .alternativa-letra,
+    .alternativa-btn.errada .alternativa-letra { color: inherit; }
 
     .gabarito-box {
       margin-top: 20px;
@@ -106,8 +139,7 @@
       color: var(--muted);
       padding: 10px 20px;
       border-radius: 100px;
-      font-size: 0.88rem;
-      font-weight: 500;
+      font-size: 0.88rem; font-weight: 500;
       cursor: pointer;
       font-family: var(--font-body);
       transition: var(--transition);
@@ -254,6 +286,7 @@
       .aberta-comparacao { grid-template-columns: 1fr; }
       .autoavaliacao-btns { grid-template-columns: repeat(2,1fr); }
       .questao-bubble { width: 28px; height: 28px; font-size: 0.7rem; }
+      .prova-nav-titulo { display: none; }
     }
   </style>
 </head>
@@ -262,14 +295,20 @@
   <nav class="prova-nav">
     <button class="btn btn--ghost" id="btn-inicio" onclick="confirmarSaida()">← Início</button>
     <div id="prova-titulo" class="prova-nav-titulo">SOI 1 · 2023.1</div>
-    <div class="prova-timer" id="timer">--:--</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="prova-nav-questao">Questão <span id="nav-questao-atual">1</span>/<span id="nav-questao-total">?</span></div>
+      <div class="prova-timer" id="timer">--:--</div>
+    </div>
   </nav>
 
   <div class="progress-bar">
     <div class="progress-fill" id="progress-fill"></div>
   </div>
 
-  <div class="questao-nav" id="questao-nav"></div>
+  <!-- MENU DE QUESTÕES FIXO -->
+  <div class="questao-nav-wrap">
+    <div class="questao-nav" id="questao-nav"></div>
+  </div>
 
   <main class="prova-main">
     <div class="prova-card" id="prova-card">

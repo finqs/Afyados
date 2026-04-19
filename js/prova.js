@@ -343,3 +343,8 @@ window.confirmarSaida = function() {
 window.addEventListener('beforeunload', () => {
   if (intervalTimer) clearInterval(intervalTimer)
 })
+// Atualiza contador na navbar
+  const navAtual = document.getElementById('nav-questao-atual')
+  const navTotal = document.getElementById('nav-questao-total')
+  if (navAtual) navAtual.textContent = questaoAtual + 1
+  if (navTotal) navTotal.textContent = questoes.length

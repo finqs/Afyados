@@ -18,6 +18,29 @@ function abrirModalMateria(nome, periodo) {
   modal.classList.add('active')
   document.body.style.overflow = 'hidden'
 
+  const nomeUpper = nome.toUpperCase()
+  const isSOI = nomeUpper.includes('SOI')
+  const isHAM = nomeUpper.includes('HAM')
+
+  const btn2Titulo = isSOI ? 'Simulado Prova Processual' :
+                     isHAM ? 'Práticas de HAM' : 'Simulados'
+  const btn2Desc  = isSOI ? 'Treine questões processuais' :
+                     isHAM ? 'Atividades práticas de HAM' : 'Em breve'
+  const btn3Titulo = isSOI ? 'Provas Laboratório' :
+                     isHAM ? 'Simulado OSCE' : 'Análise por IA'
+  const btn3Desc  = isSOI ? 'Questões de laboratório' :
+                     isHAM ? 'Simulado de habilidades clínicas' : 'Em breve'
+
+  const btns = modal.querySelectorAll('.modal-btn')
+  if (btns[1]) {
+    btns[1].querySelector('.modal-btn-title').textContent = btn2Titulo
+    btns[1].querySelector('.modal-btn-desc').textContent = btn2Desc
+  }
+  if (btns[2]) {
+    btns[2].querySelector('.modal-btn-title').textContent = btn3Titulo
+    btns[2].querySelector('.modal-btn-desc').textContent = btn3Desc
+  }
+
   document.getElementById('modal-btn-provas').onclick = () => {
     modal.classList.remove('active')
     document.body.style.overflow = ''
@@ -52,7 +75,6 @@ function fecharModalSobre() {
   if (modalSobre) { modalSobre.classList.remove('active'); document.body.style.overflow = '' }
 }
 
-// Footer sobre
 const flSobre = document.getElementById('fl-sobre')
 if (flSobre) flSobre.addEventListener('click', () => abrirModalSobre())
 
