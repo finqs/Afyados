@@ -72,6 +72,10 @@
     .auth-link:hover { color: var(--cyan); }
     .auth-error { font-size: 0.82rem; color: #f87171; text-align: center; min-height: 20px; }
     .auth-divider { display: flex; align-items: center; gap: 12px; color: var(--muted-dim); font-size: 0.78rem; }
+    .label-optional { font-weight: 400; color: var(--muted-dim); font-size: 0.74rem; margin-left: 4px; }
+    .input-field option { background: #0d1117; color: var(--white); }
+    .periodo-hint { font-size: 0.78rem; color: var(--muted-dim); display: flex; align-items: center; gap: 6px; }
+    .periodo-hint::before { content: '✦'; color: var(--blue-neon); font-size: 0.6rem; }
     .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
     @media (max-width: 480px) { .auth-card { padding: 32px 24px; } }
   </style>
@@ -99,6 +103,22 @@
         <div class="input-group">
           <label class="input-label" for="senha">Senha</label>
           <input type="password" id="senha" class="input-field" placeholder="Min. 8 chars, A-z, 0-9" />
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="periodo">Período<span class="label-optional">(opcional)</span></label>
+          <select id="periodo" class="input-field">
+            <option value="">Selecionar depois</option>
+            <option value="1">1º Período</option>
+            <option value="2">2º Período</option>
+            <option value="3">3º Período</option>
+            <option value="4">4º Período</option>
+            <option value="5">5º Período</option>
+            <option value="6">6º Período</option>
+            <option value="7">7º Período</option>
+            <option value="8">8º Período</option>
+            <option value="internato">Internato</option>
+          </select>
+          <span class="periodo-hint">O site recomendará provas e conteúdos do seu período</span>
         </div>
         <button class="btn-auth" id="btn-cadastro">Criar conta</button>
         <p class="auth-error" id="auth-error"></p>
