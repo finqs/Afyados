@@ -40,6 +40,6 @@ export interface AttemptAnswer {
   id: string
   attempt_id: string
   questao_id: string
-  resposta_usuario: string
-  correta: boolean | number
+  resposta: string
+  acertou: boolean | number
 }

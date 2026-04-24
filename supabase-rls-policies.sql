@@ -103,3 +103,23 @@ CREATE POLICY "answers_insert_own" ON attempt_answers
       AND exam_attempts.user_id = auth.uid()
     )
   );
+
+-- Usuarios podem atualizar respostas das suas tentativas
+CREATE POLICY "answers_update_own" ON attempt_answers
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM exam_attempts
+      WHERE exam_attempts.id = attempt_answers.attempt_id
+      AND exam_attempts.user_id = auth.uid()
+    )
+  );
+
+-- Usuarios podem deletar respostas das suas tentativas
+CREATE POLICY "answers_delete_own" ON attempt_answers
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM exam_attempts
+      WHERE exam_attempts.id = attempt_answers.attempt_id
+      AND exam_attempts.user_id = auth.uid()
+    )
+  );

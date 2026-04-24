@@ -87,13 +87,17 @@ export default function HomePage() {
         setUserPeriodo(null)
         return
       }
-      if (s?.user?.user_metadata?.periodo) {
-        setUserPeriodo(s.user.user_metadata.periodo)
-      } else {
-        setUserPeriodo(null)
+      const novoPeriodo = s?.user?.user_metadata?.periodo ?? null
+      setUserPeriodo(novoPeriodo)
+      // USER_UPDATED: se o período mudou no perfil, atualizar aba ativa
+      if (event === 'USER_UPDATED' && novoPeriodo) {
+        setPeriodoAtivo(novoPeriodo)
+        carregarMaterias(novoPeriodo)
       }
     })
     return () => subscription.unsubscribe()
+  // carregarMaterias é estável (useCallback com []), seguro capturar
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Auto-activate user's period
@@ -481,7 +485,7 @@ export default function HomePage() {
             </div>
             <div className="footer__col">
               <span className="footer__col-title">Plataforma</span>
-              <a onClick={() => setModalSobreOpen(true)}>Sobre</a>
+              <button type="button" className="footer__link-btn" onClick={() => setModalSobreOpen(true)}>Sobre</button>
               <a href="mailto:filipenqs@hotmail.com">Contato</a>
             </div>
           </div>

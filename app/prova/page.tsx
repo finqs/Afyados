@@ -8,6 +8,9 @@ import type { Questao } from '@/types'
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 // Threshold unificado para questões abertas: >= 75% = acerto
 const NOTA_ABERTA_ACERTO = 75
+const MAX_RESPOSTA_ABERTA_LEN = 10_000
+// Sentinela para "viu gabarito mas ainda não auto-avaliou"
+const SENTINEL_ABERTA_SEM_NOTA = '__aberta_pendente__'
 
 function ProvaContent() {
   const router = useRouter()
@@ -53,6 +56,13 @@ function ProvaContent() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const mountedRef = useRef(true)
+  // Ref para sempre chamar a versão mais atual de finalizarProva (evita closure obsoleta no timer)
+  const finalizarProvaRef = useRef<() => Promise<void>>(async () => {})
+
+  // Modal de confirmação de saída
+  const [modalSairOpen, setModalSairOpen] = useState(false)
+  // Erro de inicialização
+  const [erroInicio, setErroInicio] = useState('')
 
   const carregarQuestoes = useCallback(async () => {
     if (!provaId) return
@@ -81,21 +91,20 @@ function ProvaContent() {
     }
   }, [isValidId, carregarQuestoes])
 
-  // Timer
+  // Timer — usa finalizarProvaRef para sempre pegar o estado atual
   useEffect(() => {
     if (!provaIniciada || !usarTimer) return
     intervalRef.current = setInterval(() => {
       setTempoRestante(prev => {
         if (prev <= 1) {
           clearInterval(intervalRef.current!)
-          finalizarProva()
+          finalizarProvaRef.current()
           return 0
         }
         return prev - 1
       })
     }, 1000)
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provaIniciada, usarTimer])
 
   // Cleanup on unmount
@@ -117,21 +126,34 @@ function ProvaContent() {
 
   const iniciarProva = async () => {
     setIniciando(true)
+    setErroInicio('')
     const tt = timerValor * 60
     setTempoTotal(tt)
     setTempoRestante(tt)
 
     const { data: { session } } = await supabase.auth.getSession()
-    if (session) {
-      const { data: attempt, error } = await supabase.from('exam_attempts').insert({
-        user_id: session.user.id,
-        prova_id: provaId,
-        modo: modoGabarito,
-        total: questoes.length
-      }).select().single()
-      if (!error && attempt) setAttemptId(attempt.id)
+    if (!session) {
+      setErroInicio('Você precisa estar logado para iniciar uma prova.')
+      setIniciando(false)
+      return
     }
 
+    const { data: attempt, error } = await supabase.from('exam_attempts').insert({
+      user_id: session.user.id,
+      prova_id: provaId,
+      modo: modoGabarito,
+      total: questoes.length
+    }).select().single()
+
+    if (!mountedRef.current) return
+
+    if (error || !attempt) {
+      setErroInicio('Erro ao iniciar: ' + (error?.message || 'não foi possível criar a tentativa.'))
+      setIniciando(false)
+      return
+    }
+
+    setAttemptId(attempt.id)
     setModalConfigOpen(false)
     setProvaIniciada(true)
     setIniciando(false)
@@ -139,12 +161,16 @@ function ProvaContent() {
 
   const salvarResposta = async (questaoId: string, resposta: string, acertou: boolean | number) => {
     if (!attemptId) return
-    await supabase.from('attempt_answers').insert({
+    const { error } = await supabase.from('attempt_answers').insert({
       attempt_id: attemptId,
       questao_id: questaoId,
       resposta,
       acertou
     })
+    if (error) {
+      // Log local; sem await nas chamadas, erros silenciosos eram o problema
+      console.error('Falha ao salvar resposta:', error.message)
+    }
   }
 
   const responder = (letra: string) => {
@@ -156,15 +182,20 @@ function ProvaContent() {
   }
 
   const verGabaritoAberta = () => {
-    const texto = textareaRef.current?.value.trim() ?? ''
+    let texto = textareaRef.current?.value.trim() ?? ''
+    if (texto.length > MAX_RESPOSTA_ABERTA_LEN) {
+      texto = texto.slice(0, MAX_RESPOSTA_ABERTA_LEN)
+    }
     setRespostasTexto(prev => ({ ...prev, [questaoAtual]: texto }))
-    setRespostas(prev => ({ ...prev, [questaoAtual]: '0' }))
+    setRespostas(prev => ({ ...prev, [questaoAtual]: SENTINEL_ABERTA_SEM_NOTA }))
   }
 
   const notarAberta = (nota: string) => {
     setRespostas(prev => ({ ...prev, [questaoAtual]: nota }))
     const q = questoes[questaoAtual]
-    salvarResposta(q.id, nota, parseFloat(nota) / 100)
+    const texto = respostasTexto[questaoAtual] ?? ''
+    // Persistir resposta textual + nota auto-avaliada
+    salvarResposta(q.id, `${nota}|${texto}`, parseFloat(nota) / 100)
   }
 
   const finalizarProva = useCallback(async () => {
@@ -172,23 +203,26 @@ function ProvaContent() {
     setFinalizando(true)
 
     const total = questoes.length
+    const notaAberta = (v: string | undefined) => {
+      if (!v || v === SENTINEL_ABERTA_SEM_NOTA) return 0
+      const num = parseFloat(v)
+      return isNaN(num) ? 0 : num
+    }
     const acertos = questoes.filter((q, i) => {
-      if (q.tipo === 'aberta') {
-        const nota = parseFloat(respostas[i]) || 0
-        return nota >= NOTA_ABERTA_ACERTO
-      }
+      if (q.tipo === 'aberta') return notaAberta(respostas[i]) >= NOTA_ABERTA_ACERTO
       return respostas[i] === q.gabarito
     }).length
     const percent = total > 0 ? Math.round((acertos / total) * 100) : 0
 
     if (attemptId) {
-      await supabase.from('exam_attempts').update({
+      const { error } = await supabase.from('exam_attempts').update({
         finalizada: true,
         score: acertos
       }).eq('id', attemptId)
+      if (error) console.error('Falha ao finalizar tentativa:', error.message)
     }
 
-    if (!mountedRef.current) return  // component unmounted, skip state updates
+    if (!mountedRef.current) return
 
     setResultadoScore(`${acertos}/${total}`)
     setResultadoPercent(`${percent}%`)
@@ -199,25 +233,28 @@ function ProvaContent() {
     )
     setResultadoItems(questoes.map((q, i) => {
       let classe = 'resultado-item'
-      if (respostas[i] === undefined) classe += ' pulou'
+      const r = respostas[i]
+      if (r === undefined) classe += ' pulou'
       else if (q.tipo === 'aberta') {
-        const nota = parseFloat(respostas[i]) || 0
+        const nota = notaAberta(r)
         classe += nota >= NOTA_ABERTA_ACERTO ? ' acerto' : nota > 0 ? ' respondida' : ' erro'
-      } else if (respostas[i] === q.gabarito) classe += ' acerto'
+      } else if (r === q.gabarito) classe += ' acerto'
       else classe += ' erro'
       return { classe, num: i + 1 }
     }))
 
     setFinalizando(false)
     setModalResultadoOpen(true)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questoes, respostas, attemptId])
+
+  // Mantém a ref sempre com a versão atual para o timer
+  useEffect(() => {
+    finalizarProvaRef.current = finalizarProva
+  }, [finalizarProva])
 
   const confirmarSaida = () => {
     if (provaIniciada && Object.keys(respostas).length > 0) {
-      if (confirm('Deseja sair? Seu progresso será perdido.')) {
-        router.push('/')
-      }
+      setModalSairOpen(true)
     } else {
       router.push('/')
     }
@@ -226,12 +263,13 @@ function ProvaContent() {
   const getBubbleClass = (i: number) => {
     let cls = 'questao-bubble'
     if (i === questaoAtual) return cls + ' atual'
-    if (respostas[i] !== undefined) {
+    const r = respostas[i]
+    if (r !== undefined) {
       const q = questoes[i]
       if (q?.tipo === 'aberta') {
-        cls += respostas[i] === '0' ? ' respondida' : ' acertou'
+        cls += r === SENTINEL_ABERTA_SEM_NOTA ? ' respondida' : ' acertou'
       } else if (modoGabarito === 'apos') {
-        cls += respostas[i] === q?.gabarito ? ' acertou' : ' errou'
+        cls += r === q?.gabarito ? ' acertou' : ' errou'
       } else {
         cls += ' respondida'
       }
@@ -502,6 +540,11 @@ function ProvaContent() {
               </div>
             )}
           </div>
+          {erroInicio && (
+            <p style={{ color: '#f87171', fontSize: '0.88rem', marginTop: '16px', textAlign: 'center' }}>
+              {erroInicio}
+            </p>
+          )}
           <button
             className="btn btn--primary"
             style={{ marginTop: '24px', width: '100%', justifyContent: 'center' }}
@@ -510,6 +553,32 @@ function ProvaContent() {
           >
             {iniciando ? 'Iniciando...' : 'INICIAR PROVA →'}
           </button>
+        </div>
+      </div>
+
+      {/* MODAL CONFIRMAÇÃO DE SAÍDA */}
+      <div role="dialog" aria-modal="true" aria-label="Confirmar saída" className={`modal-overlay${modalSairOpen ? ' active' : ''}`} onClick={e => { if (e.target === e.currentTarget) setModalSairOpen(false) }}>
+        <div className="modal">
+          <div className="modal-title-bar">SAIR DA PROVA?</div>
+          <p style={{ color: 'var(--muted)', fontSize: '0.92rem', textAlign: 'center', padding: '8px 0 16px' }}>
+            Seu progresso será perdido. Tem certeza que deseja voltar ao início?
+          </p>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+            <button
+              className="btn btn--ghost"
+              style={{ flex: 1, justifyContent: 'center' }}
+              onClick={() => setModalSairOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              className="btn btn--primary"
+              style={{ flex: 1, justifyContent: 'center', background: '#f87171' }}
+              onClick={() => { setModalSairOpen(false); router.push('/') }}
+            >
+              Sair mesmo assim
+            </button>
+          </div>
         </div>
       </div>
 

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { fileToBase64 } from '@/lib/utils'
-import type { Questao } from '@/types'
 
 interface QuestaoExtraida {
   numero: number
@@ -37,8 +36,12 @@ function normalizeQuestoes(parsed: unknown): QuestaoExtraida[] {
     if (tipo === 'multipla_escolha' && !['A','B','C','D','E'].includes(gabarito.toUpperCase())) {
       throw new Error(`Questão ${i + 1}: gabarito "${gabarito}" inválido para múltipla escolha.`)
     }
+    const numeroRaw = q.numero
+    const numero = Number.isInteger(numeroRaw) && (numeroRaw as number) > 0
+      ? (numeroRaw as number)
+      : i + 1
     return {
-      numero: typeof q.numero === 'number' ? q.numero : i + 1,
+      numero,
       tipo,
       enunciado,
       alternativa_a: String(q.alternativa_a ?? ''),
@@ -60,7 +63,6 @@ export default function AdminPage() {
   // Form state
   const [materia, setMateria] = useState('')
   const [periodo, setPeriodo] = useState('')
-  const [isIntegradora, setIsIntegradora] = useState(false)
   const [ano, setAno] = useState('')
   const [semestre, setSemestre] = useState('1')
 
@@ -83,7 +85,7 @@ export default function AdminPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace('/login'); return }
       if (session.user.app_metadata?.role !== 'admin') {
-        alert('Acesso restrito a administradores.')
+        // Redireciona direto; login.html protegido e home exibe apenas para logado
         router.replace('/')
         return
       }
@@ -199,11 +201,20 @@ export default function AdminPage() {
       }))
 
       const { error: questoesError } = await supabase.from('questoes').insert(questoesParaSalvar)
-      if (questoesError) throw new Error(questoesError.message)
+      if (questoesError) {
+        // Rollback: remove a prova órfã antes de falhar
+        const { error: rollbackError } = await supabase.from('provas').delete().eq('id', prova.id)
+        if (rollbackError) {
+          console.error('Falha no rollback da prova órfã:', rollbackError.message)
+        }
+        throw new Error('Erro ao salvar questões: ' + questoesError.message)
+      }
 
       setStatusMsg('✅ Prova e questões salvas com sucesso!', 'sucesso')
+      // Limpa preview para evitar re-salvar acidentalmente
+      setQuestoes([])
     } catch (err) {
-      alert((err as Error).message)
+      setStatusMsg(`❌ ${(err as Error).message}`, 'erro')
     } finally {
       setSalvando(false)
     }
@@ -280,22 +291,6 @@ export default function AdminPage() {
                 </select>
               </div>
             </div>
-
-            {/* TOGGLE INTEGRADORA */}
-            <label className="integradora-toggle">
-              <input
-                type="checkbox"
-                checked={isIntegradora}
-                onChange={e => setIsIntegradora(e.target.checked)}
-              />
-              <span className="integradora-toggle__box">
-                <span className="integradora-toggle__check">✓</span>
-              </span>
-              <div className="integradora-toggle__text">
-                <span className="integradora-toggle__label">Prova Integradora</span>
-                <span className="integradora-toggle__desc">Une as disciplinas de SOI, IESC e HAM · selecione o período correspondente</span>
-              </div>
-            </label>
 
             {/* MODO IA */}
             <div className="admin-card" style={{ marginTop: '8px' }}>
