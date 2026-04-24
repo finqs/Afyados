@@ -1,63 +1,64 @@
-const Anthropic = require('@anthropic-ai/sdk')
-const { createClient } = require('@supabase/supabase-js')
+import { NextRequest, NextResponse } from 'next/server'
+import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@supabase/supabase-js'
 
 const MAX_PDF_BASE64_LENGTH = 14_000_000 // ~10MB PDF
 
-module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Metodo nao permitido.' })
+export async function POST(req: NextRequest) {
+  // 1. Verificar Bearer token
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
   }
-
-  // --- Auth: verify Supabase session ---
-  const authHeader = req.headers.authorization
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Nao autorizado.' })
-  }
-
   const token = authHeader.replace('Bearer ', '')
 
-  const supabaseUrl = process.env.SUPABASE_URL
+  // 2. Validar env vars
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const apiKey = process.env.ANTHROPIC_API_KEY
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('Variaveis SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY nao configuradas.')
-    return res.status(500).json({ error: 'Erro de configuracao do servidor.' })
+    console.error('Variáveis NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configuradas.')
+    return NextResponse.json({ error: 'Erro de configuração do servidor.' }, { status: 500 })
+  }
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY não configurada.')
+    return NextResponse.json({ error: 'Erro de configuração do servidor.' }, { status: 500 })
   }
 
+  // 3. Validar usuário via Supabase service role
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
   const { data: { user }, error: authError } = await supabase.auth.getUser(token)
 
   if (authError || !user) {
-    return res.status(401).json({ error: 'Token invalido ou expirado.' })
+    return NextResponse.json({ error: 'Token inválido ou expirado.' }, { status: 401 })
   }
 
-  // Check admin role
-  const role = user.app_metadata?.role
-  if (role !== 'admin') {
-    return res.status(403).json({ error: 'Acesso restrito a administradores.' })
+  // 4. Verificar role admin
+  if (user.app_metadata?.role !== 'admin') {
+    return NextResponse.json({ error: 'Acesso restrito a administradores.' }, { status: 403 })
   }
 
-  // --- API Key ---
-  const apiKey = process.env.ANTHROPIC_API_KEY
-
-  if (!apiKey) {
-    console.error('ANTHROPIC_API_KEY nao configurada.')
-    return res.status(500).json({ error: 'Erro de configuracao do servidor.' })
-  }
-
-  const client = new Anthropic({ apiKey })
-
+  // 5. Ler body
+  let body: { pdfBase64?: string }
   try {
-    const { pdfBase64 } = req.body
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Body inválido.' }, { status: 400 })
+  }
 
-    if (!pdfBase64) {
-      return res.status(400).json({ error: 'PDF nao fornecido.' })
-    }
+  const { pdfBase64 } = body
+  if (!pdfBase64) {
+    return NextResponse.json({ error: 'PDF não fornecido.' }, { status: 400 })
+  }
 
-    // Size limit
-    if (pdfBase64.length > MAX_PDF_BASE64_LENGTH) {
-      return res.status(400).json({ error: 'PDF muito grande. Tamanho maximo: 10MB.' })
-    }
+  if (pdfBase64.length > MAX_PDF_BASE64_LENGTH) {
+    return NextResponse.json({ error: 'PDF muito grande. Tamanho máximo: 10MB.' }, { status: 413 })
+  }
+
+  // 6. Chamar Anthropic (mesmo prompt do api/extrair.js original)
+  try {
+    const client = new Anthropic({ apiKey })
 
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -107,14 +108,13 @@ Regras:
       ]
     })
 
-    const texto = message.content[0].text.trim()
+    const texto = message.content[0].type === 'text' ? message.content[0].text.trim() : ''
     const jsonLimpo = texto.replace(/```json|```/g, '').trim()
     const questoes = JSON.parse(jsonLimpo)
 
-    return res.status(200).json({ questoes })
-
+    return NextResponse.json({ questoes })
   } catch (error) {
     console.error('Erro na API:', error)
-    return res.status(500).json({ error: 'Erro ao processar o PDF.' })
+    return NextResponse.json({ error: 'Erro ao processar o PDF.' }, { status: 500 })
   }
 }

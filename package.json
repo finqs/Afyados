@@ -1,17 +1,25 @@
 {
-  "name": "projeto-afyados",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "medflow-ai",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.82.0",
-    "@supabase/supabase-js": "^2.103.0"
+    "@anthropic-ai/sdk": "^0.91.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "chart.js": "^4.4.1",
+    "next": "14.2.5",
+    "react": "^18",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "typescript": "^5"
   }
 }
