@@ -49,6 +49,21 @@ export default function HomePage() {
   // Modal Sobre
   const [modalSobreOpen, setModalSobreOpen] = useState(false)
 
+  // Inline feedback (replaces alert())
+  const [infoMsg, setInfoMsg] = useState('')
+
+  // ESC closes any open modal
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (modalSobreOpen) setModalSobreOpen(false)
+      else if (modalOpen) fecharModal()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalSobreOpen, modalOpen])
+
   // Header scroll effect
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 10)
@@ -64,8 +79,14 @@ export default function HomePage() {
         setUserPeriodo(s.user.user_metadata.periodo)
       }
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s as typeof session)
+      // Token expired or user signed out remotely — clear session state
+      if (event === 'TOKEN_REFRESHED' && !s) {
+        setSession(null)
+        setUserPeriodo(null)
+        return
+      }
       if (s?.user?.user_metadata?.periodo) {
         setUserPeriodo(s.user.user_metadata.periodo)
       } else {
@@ -131,6 +152,7 @@ export default function HomePage() {
     setModalMateriaAtiva(null)
     setShowProvasList(false)
     setProvasList([])
+    setInfoMsg('')
   }
 
   const carregarProvas = async () => {
@@ -147,7 +169,8 @@ export default function HomePage() {
     setLoadingProvas(false)
 
     if (error || !data || !data.length) {
-      alert('Nenhuma prova disponível para esta matéria ainda.')
+      setInfoMsg('Nenhuma prova disponível para esta matéria ainda.')
+      setShowProvasList(true)
       return
     }
 
@@ -327,7 +350,7 @@ export default function HomePage() {
               </div>
               <a href="#periodos" className="content-card__link">Explorar provas →</a>
             </div>
-            <div className="content-card content-card--featured" onClick={() => alert('🚧 Simulados personalizados em breve!')}>
+            <div className="content-card content-card--featured">
               <div className="content-card__badge">Em breve</div>
               <div className="content-card__icon">📝</div>
               <h3 className="content-card__title">Simulados personalizados</h3>
@@ -532,21 +555,29 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="modal-actions">
-              <div style={{ gridColumn: '1/-1', fontSize: '0.82rem', color: 'var(--muted)', textAlign: 'center', marginBottom: '4px' }}>
-                Escolha a prova:
-              </div>
-              <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {provasList.map(p => (
-                  <button
-                    key={p.id}
-                    className="btn btn--primary"
-                    style={{ justifyContent: 'center' }}
-                    onClick={() => irParaProva(p)}
-                  >
-                    {p.materia} · {p.ano}.{p.semestre}
-                  </button>
-                ))}
-              </div>
+              {infoMsg ? (
+                <div style={{ gridColumn: '1/-1', fontSize: '0.88rem', color: 'var(--muted)', textAlign: 'center', padding: '16px 0' }}>
+                  {infoMsg}
+                </div>
+              ) : (
+                <>
+                  <div style={{ gridColumn: '1/-1', fontSize: '0.82rem', color: 'var(--muted)', textAlign: 'center', marginBottom: '4px' }}>
+                    Escolha a prova:
+                  </div>
+                  <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {provasList.map(p => (
+                      <button
+                        key={p.id}
+                        className="btn btn--primary"
+                        style={{ justifyContent: 'center' }}
+                        onClick={() => irParaProva(p)}
+                      >
+                        {p.materia} · {p.ano}.{p.semestre}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
           <div className="modal-footer">MEDFLOW.AI V1.0</div>

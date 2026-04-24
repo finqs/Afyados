@@ -97,9 +97,16 @@ export default function AdminPage() {
   }
 
   const getDadosProva = () => {
-    if (!materia.trim() || !periodo || !ano) {
-      setStatusMsg('Preencha matéria, período e ano.', 'erro')
-      return null
+    if (!materia.trim()) { setStatusMsg('Preencha o campo Matéria.', 'erro'); return null }
+    if (!periodo) { setStatusMsg('Selecione o Período.', 'erro'); return null }
+    if (!ano) { setStatusMsg('Preencha o Ano.', 'erro'); return null }
+    const periodoNum = parseInt(periodo)
+    const anoNum = parseInt(ano)
+    if (isNaN(periodoNum) || periodoNum < 1 || periodoNum > 8) {
+      setStatusMsg('Período inválido (use 1–8).', 'erro'); return null
+    }
+    if (isNaN(anoNum) || anoNum < 2000 || anoNum > 2100) {
+      setStatusMsg('Ano inválido.', 'erro'); return null
     }
     return { materia: materia.trim(), periodo, ano, semestre }
   }
@@ -157,13 +164,20 @@ export default function AdminPage() {
 
     setSalvando(true)
     try {
+      const periodoSalvo = parseInt(dados.periodo)
+      const anoSalvo = parseInt(dados.ano)
+      const semestreSalvo = parseInt(dados.semestre)
+      if (isNaN(periodoSalvo) || isNaN(anoSalvo) || isNaN(semestreSalvo)) {
+        throw new Error('Período, ano ou semestre inválidos.')
+      }
+
       const { data: prova, error: provaError } = await supabase
         .from('provas')
         .insert({
           materia: dados.materia,
-          periodo: parseInt(dados.periodo),
-          ano: parseInt(dados.ano),
-          semestre: parseInt(dados.semestre)
+          periodo: periodoSalvo,
+          ano: anoSalvo,
+          semestre: semestreSalvo
         })
         .select()
         .single()

@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase'
 import type { Questao } from '@/types'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// Threshold unificado para questões abertas: >= 75% = acerto
+const NOTA_ABERTA_ACERTO = 75
 
 function ProvaContent() {
   const router = useRouter()
@@ -173,7 +175,7 @@ function ProvaContent() {
     const acertos = questoes.filter((q, i) => {
       if (q.tipo === 'aberta') {
         const nota = parseFloat(respostas[i]) || 0
-        return nota >= 100
+        return nota >= NOTA_ABERTA_ACERTO
       }
       return respostas[i] === q.gabarito
     }).length
@@ -200,7 +202,7 @@ function ProvaContent() {
       if (respostas[i] === undefined) classe += ' pulou'
       else if (q.tipo === 'aberta') {
         const nota = parseFloat(respostas[i]) || 0
-        classe += nota >= 75 ? ' acerto' : nota > 0 ? ' respondida' : ' erro'
+        classe += nota >= NOTA_ABERTA_ACERTO ? ' acerto' : nota > 0 ? ' respondida' : ' erro'
       } else if (respostas[i] === q.gabarito) classe += ' acerto'
       else classe += ' erro'
       return { classe, num: i + 1 }
