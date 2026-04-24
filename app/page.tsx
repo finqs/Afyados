@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { Prova } from '@/types'
@@ -19,11 +19,13 @@ const PERIODOS = [
   { label: '6º Período', value: '6' },
   { label: '7º Período', value: '7' },
   { label: '8º Período', value: '8' },
+  { label: 'Integradora', value: 'integradora' },
   { label: 'Internato', value: 'internato' },
 ]
 
 function periodoLabel(periodo: string) {
   if (periodo === 'internato') return 'Internato'
+  if (periodo === 'integradora') return 'Integradora'
   return `${periodo}º Período`
 }
 
@@ -33,6 +35,7 @@ export default function HomePage() {
   const [periodoAtivo, setPeriodoAtivo] = useState<string | null>(null)
   const [materias, setMaterias] = useState<MateriaInfo[]>([])
   const [loadingMaterias, setLoadingMaterias] = useState(false)
+  const pillDebounceRef = useRef<NodeJS.Timeout | null>(null)
   const [scrolled, setScrolled] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
   const [userPeriodo, setUserPeriodo] = useState<string | null>(null)
@@ -47,6 +50,21 @@ export default function HomePage() {
 
   // Modal Sobre
   const [modalSobreOpen, setModalSobreOpen] = useState(false)
+
+  // Inline feedback (replaces alert())
+  const [infoMsg, setInfoMsg] = useState('')
+
+  // ESC closes any open modal
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (modalSobreOpen) setModalSobreOpen(false)
+      else if (modalOpen) fecharModal()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalSobreOpen, modalOpen])
 
   // Header scroll effect
   useEffect(() => {
@@ -63,8 +81,14 @@ export default function HomePage() {
         setUserPeriodo(s.user.user_metadata.periodo)
       }
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s as typeof session)
+      // Token expired or user signed out remotely — clear session state
+      if (event === 'TOKEN_REFRESHED' && !s) {
+        setSession(null)
+        setUserPeriodo(null)
+        return
+      }
       if (s?.user?.user_metadata?.periodo) {
         setUserPeriodo(s.user.user_metadata.periodo)
       } else {
@@ -87,10 +111,12 @@ export default function HomePage() {
     setLoadingMaterias(true)
     setMaterias([])
     const periodoNum = parseInt(periodo)
-    const isInternato = isNaN(periodoNum)
+    const isInternato = !isNaN(periodoNum) && periodoNum >= 9
+    const isIntegradora = periodo === 'integradora'
 
     let query = supabase.from('provas').select('materia')
-    if (isInternato) query = query.gte('periodo', 9)
+    if (isIntegradora) query = query.eq('periodo', 0)
+    else if (isInternato || isNaN(periodoNum)) query = query.gte('periodo', 9)
     else query = query.eq('periodo', periodoNum)
 
     const { data, error } = await query
@@ -107,13 +133,14 @@ export default function HomePage() {
   }, [])
 
   const handlePillClick = (periodo: string) => {
+    if (pillDebounceRef.current) clearTimeout(pillDebounceRef.current)
     if (periodoAtivo === periodo) {
       setPeriodoAtivo(null)
       setMaterias([])
       return
     }
     setPeriodoAtivo(periodo)
-    carregarMaterias(periodo)
+    pillDebounceRef.current = setTimeout(() => carregarMaterias(periodo), 200)
   }
 
   const abrirModalMateria = (materia: MateriaInfo) => {
@@ -129,6 +156,7 @@ export default function HomePage() {
     setModalMateriaAtiva(null)
     setShowProvasList(false)
     setProvasList([])
+    setInfoMsg('')
   }
 
   const carregarProvas = async () => {
@@ -137,15 +165,18 @@ export default function HomePage() {
 
     const { nome, periodo } = modalMateriaAtiva
     const periodoNum = parseInt(periodo)
+    const isIntegradora = periodo === 'integradora'
 
     let query = supabase.from('provas').select('*').eq('materia', nome).order('ano')
-    if (!isNaN(periodoNum)) query = query.eq('periodo', periodoNum)
+    if (isIntegradora) query = query.eq('periodo', 0)
+    else if (!isNaN(periodoNum)) query = query.eq('periodo', periodoNum)
 
     const { data, error } = await query
     setLoadingProvas(false)
 
     if (error || !data || !data.length) {
-      alert('Nenhuma prova disponível para esta matéria ainda.')
+      setInfoMsg('Nenhuma prova disponível para esta matéria ainda.')
+      setShowProvasList(true)
       return
     }
 
@@ -325,7 +356,7 @@ export default function HomePage() {
               </div>
               <a href="#periodos" className="content-card__link">Explorar provas →</a>
             </div>
-            <div className="content-card content-card--featured" onClick={() => alert('🚧 Simulados personalizados em breve!')}>
+            <div className="content-card content-card--featured">
               <div className="content-card__badge">Em breve</div>
               <div className="content-card__icon">📝</div>
               <h3 className="content-card__title">Simulados personalizados</h3>
@@ -389,6 +420,7 @@ export default function HomePage() {
                   key={p.value}
                   className={cls}
                   data-periodo={p.value}
+                  title={p.value === 'integradora' ? 'Prova que une SOI, IESC e HAM' : undefined}
                   onClick={() => handlePillClick(p.value)}
                 >
                   {p.label}
@@ -400,6 +432,18 @@ export default function HomePage() {
           <div className="periods__content" id="materias-grid">
             {loadingMaterias && (
               <div className="loading-text">Carregando matérias...</div>
+            )}
+            {!loadingMaterias && periodoAtivo === 'integradora' && materias.length > 0 && (
+              <div className="integradora-banner">
+                <span className="integradora-banner__icon">🔗</span>
+                <div>
+                  <strong>Prova Integradora</strong>
+                  <span>Une as disciplinas de SOI, IESC e HAM</span>
+                </div>
+                <div className="integradora-banner__tags">
+                  <span>SOI</span><span>IESC</span><span>HAM</span>
+                </div>
+              </div>
             )}
             {!loadingMaterias && periodoAtivo && materias.length === 0 && (
               <div className="loading-text">Nenhuma matéria disponível para este período.</div>
@@ -469,9 +513,9 @@ export default function HomePage() {
       </footer>
 
       {/* MODAL SOBRE */}
-      <div className={`modal-overlay${modalSobreOpen ? ' active' : ''}`} onClick={e => { if (e.target === e.currentTarget) setModalSobreOpen(false) }}>
+      <div role="dialog" aria-modal="true" aria-label="Sobre o projeto" className={`modal-overlay${modalSobreOpen ? ' active' : ''}`} onClick={e => { if (e.target === e.currentTarget) setModalSobreOpen(false) }}>
         <div className="modal">
-          <button className="modal-close" onClick={() => setModalSobreOpen(false)}>×</button>
+          <button className="modal-close" aria-label="Fechar" onClick={() => setModalSobreOpen(false)}>×</button>
           <div className="modal-title-bar">SOBRE O PROJETO</div>
           <p className="sobre-text">
             O <strong>MedFlow.AI</strong> é uma plataforma criada por estudantes de medicina para estudantes de medicina.
@@ -488,9 +532,9 @@ export default function HomePage() {
       </div>
 
       {/* MODAL PAINEL */}
-      <div className={`modal-overlay${modalOpen ? ' active' : ''}`} onClick={e => { if (e.target === e.currentTarget) fecharModal() }}>
+      <div role="dialog" aria-modal="true" aria-label={`Painel - ${modalSubject}`} className={`modal-overlay${modalOpen ? ' active' : ''}`} onClick={e => { if (e.target === e.currentTarget) fecharModal() }}>
         <div className="modal">
-          <button className="modal-close" onClick={fecharModal}>×</button>
+          <button className="modal-close" aria-label="Fechar" onClick={fecharModal}>×</button>
           <div className="modal-title-bar">PAINEL DE CONTROLE</div>
           <div className="modal-subject">{modalSubject}</div>
           {!showProvasList ? (
@@ -530,21 +574,29 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="modal-actions">
-              <div style={{ gridColumn: '1/-1', fontSize: '0.82rem', color: 'var(--muted)', textAlign: 'center', marginBottom: '4px' }}>
-                Escolha a prova:
-              </div>
-              <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {provasList.map(p => (
-                  <button
-                    key={p.id}
-                    className="btn btn--primary"
-                    style={{ justifyContent: 'center' }}
-                    onClick={() => irParaProva(p)}
-                  >
-                    {p.materia} · {p.ano}.{p.semestre}
-                  </button>
-                ))}
-              </div>
+              {infoMsg ? (
+                <div style={{ gridColumn: '1/-1', fontSize: '0.88rem', color: 'var(--muted)', textAlign: 'center', padding: '16px 0' }}>
+                  {infoMsg}
+                </div>
+              ) : (
+                <>
+                  <div style={{ gridColumn: '1/-1', fontSize: '0.82rem', color: 'var(--muted)', textAlign: 'center', marginBottom: '4px' }}>
+                    Escolha a prova:
+                  </div>
+                  <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {provasList.map(p => (
+                      <button
+                        key={p.id}
+                        className="btn btn--primary"
+                        style={{ justifyContent: 'center' }}
+                        onClick={() => irParaProva(p)}
+                      >
+                        {p.materia} · {p.ano}.{p.semestre}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
           <div className="modal-footer">MEDFLOW.AI V1.0</div>

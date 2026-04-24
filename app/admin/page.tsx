@@ -21,18 +21,35 @@ interface QuestaoExtraida {
 
 function normalizeQuestoes(parsed: unknown): QuestaoExtraida[] {
   const arr = Array.isArray(parsed) ? parsed : (parsed as { questoes?: unknown[] }).questoes ?? []
-  return (arr as QuestaoExtraida[]).map((q, i) => ({
-    numero: q.numero ?? i + 1,
-    tipo: q.tipo ?? 'multipla_escolha',
-    enunciado: String(q.enunciado ?? ''),
-    alternativa_a: String(q.alternativa_a ?? ''),
-    alternativa_b: String(q.alternativa_b ?? ''),
-    alternativa_c: String(q.alternativa_c ?? ''),
-    alternativa_d: String(q.alternativa_d ?? ''),
-    alternativa_e: q.alternativa_e ? String(q.alternativa_e) : '',
-    gabarito: String(q.gabarito ?? ''),
-    comentario: String(q.comentario ?? ''),
-  }))
+  if (!Array.isArray(arr) || arr.length === 0) {
+    throw new Error('JSON inválido: esperado um array de questões não vazio.')
+  }
+  return arr.map((item, i) => {
+    if (typeof item !== 'object' || item === null) {
+      throw new Error(`Questão ${i + 1}: item não é um objeto.`)
+    }
+    const q = item as Record<string, unknown>
+    const enunciado = String(q.enunciado ?? '').trim()
+    const gabarito = String(q.gabarito ?? '').trim()
+    const tipo = String(q.tipo ?? 'multipla_escolha').trim()
+    if (!enunciado) throw new Error(`Questão ${i + 1}: campo "enunciado" ausente ou vazio.`)
+    if (!gabarito) throw new Error(`Questão ${i + 1}: campo "gabarito" ausente ou vazio.`)
+    if (tipo === 'multipla_escolha' && !['A','B','C','D','E'].includes(gabarito.toUpperCase())) {
+      throw new Error(`Questão ${i + 1}: gabarito "${gabarito}" inválido para múltipla escolha.`)
+    }
+    return {
+      numero: typeof q.numero === 'number' ? q.numero : i + 1,
+      tipo,
+      enunciado,
+      alternativa_a: String(q.alternativa_a ?? ''),
+      alternativa_b: String(q.alternativa_b ?? ''),
+      alternativa_c: String(q.alternativa_c ?? ''),
+      alternativa_d: String(q.alternativa_d ?? ''),
+      alternativa_e: q.alternativa_e ? String(q.alternativa_e) : '',
+      gabarito: tipo === 'multipla_escolha' ? gabarito.toUpperCase() : gabarito,
+      comentario: String(q.comentario ?? ''),
+    }
+  })
 }
 
 export default function AdminPage() {
@@ -43,6 +60,7 @@ export default function AdminPage() {
   // Form state
   const [materia, setMateria] = useState('')
   const [periodo, setPeriodo] = useState('')
+  const [isIntegradora, setIsIntegradora] = useState(false)
   const [ano, setAno] = useState('')
   const [semestre, setSemestre] = useState('1')
 
@@ -80,9 +98,16 @@ export default function AdminPage() {
   }
 
   const getDadosProva = () => {
-    if (!materia.trim() || !periodo || !ano) {
-      setStatusMsg('Preencha matéria, período e ano.', 'erro')
-      return null
+    if (!materia.trim()) { setStatusMsg('Preencha o campo Matéria.', 'erro'); return null }
+    if (!isIntegradora && periodo === '') { setStatusMsg('Selecione o Período.', 'erro'); return null }
+    if (!ano) { setStatusMsg('Preencha o Ano.', 'erro'); return null }
+    const periodoNum = isIntegradora ? 0 : parseInt(periodo)
+    const anoNum = parseInt(ano)
+    if (!isIntegradora && (isNaN(periodoNum) || periodoNum < 1)) {
+      setStatusMsg('Período inválido.', 'erro'); return null
+    }
+    if (isNaN(anoNum) || anoNum < 2000 || anoNum > 2100) {
+      setStatusMsg('Ano inválido.', 'erro'); return null
     }
     return { materia: materia.trim(), periodo, ano, semestre }
   }
@@ -140,13 +165,20 @@ export default function AdminPage() {
 
     setSalvando(true)
     try {
+      const periodoSalvo = parseInt(dados.periodo)
+      const anoSalvo = parseInt(dados.ano)
+      const semestreSalvo = parseInt(dados.semestre)
+      if (isNaN(periodoSalvo) || isNaN(anoSalvo) || isNaN(semestreSalvo)) {
+        throw new Error('Período, ano ou semestre inválidos.')
+      }
+
       const { data: prova, error: provaError } = await supabase
         .from('provas')
         .insert({
           materia: dados.materia,
-          periodo: parseInt(dados.periodo),
-          ano: parseInt(dados.ano),
-          semestre: parseInt(dados.semestre)
+          periodo: periodoSalvo,
+          ano: anoSalvo,
+          semestre: semestreSalvo
         })
         .select()
         .single()
@@ -210,13 +242,24 @@ export default function AdminPage() {
               </div>
               <div className="input-group">
                 <label className="input-label">Período</label>
-                <input
-                  type="number"
+                <select
                   className="input-field"
-                  placeholder="Ex: 1"
                   value={periodo}
                   onChange={e => setPeriodo(e.target.value)}
-                />
+                  disabled={isIntegradora}
+                  style={isIntegradora ? { opacity: 0.4, pointerEvents: 'none' } : undefined}
+                >
+                  <option value="">Selecionar</option>
+                  <option value="1">1º Período</option>
+                  <option value="2">2º Período</option>
+                  <option value="3">3º Período</option>
+                  <option value="4">4º Período</option>
+                  <option value="5">5º Período</option>
+                  <option value="6">6º Período</option>
+                  <option value="7">7º Período</option>
+                  <option value="8">8º Período</option>
+                  <option value="9">Internato</option>
+                </select>
               </div>
               <div className="input-group">
                 <label className="input-label">Ano</label>
@@ -240,6 +283,25 @@ export default function AdminPage() {
                 </select>
               </div>
             </div>
+
+            {/* TOGGLE INTEGRADORA */}
+            <label className="integradora-toggle">
+              <input
+                type="checkbox"
+                checked={isIntegradora}
+                onChange={e => {
+                  setIsIntegradora(e.target.checked)
+                  if (e.target.checked) setPeriodo('')
+                }}
+              />
+              <span className="integradora-toggle__box">
+                <span className="integradora-toggle__check">✓</span>
+              </span>
+              <div className="integradora-toggle__text">
+                <span className="integradora-toggle__label">Prova Integradora</span>
+                <span className="integradora-toggle__desc">Une as disciplinas de SOI, IESC e HAM · ignora o campo Período</span>
+              </div>
+            </label>
 
             {/* MODO IA */}
             <div className="admin-card" style={{ marginTop: '8px' }}>
