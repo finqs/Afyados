@@ -3,7 +3,15 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import type { ExamAttempt } from '@/types'
+// Partial type matching what the Supabase query actually returns
+type AttemptRow = {
+  id: string
+  score: number
+  total: number
+  finalizada: boolean
+  created_at: string
+  provas: { materia: string; ano: number; semestre: number } | null
+}
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,7 +50,7 @@ export default function PerfilPage() {
   const [statProvas, setStatProvas] = useState('--')
   const [statMaterias, setStatMaterias] = useState('--')
 
-  const [historico, setHistorico] = useState<ExamAttempt[]>([])
+  const [historico, setHistorico] = useState<AttemptRow[]>([])
   const [materiaMap, setMateriaMap] = useState<Record<string, MateriaStats>>({})
   const [graficoData, setGraficoData] = useState<GraficoItem[]>([])
   const [loadingData, setLoadingData] = useState(true)
@@ -98,7 +106,7 @@ export default function PerfilPage() {
       return
     }
 
-    const typed = attempts as ExamAttempt[]
+    const typed = attempts as unknown as AttemptRow[]
 
     const totalQuestoes = typed.reduce((acc, a) => acc + a.total, 0)
     const totalAcertos = typed.reduce((acc, a) => acc + a.score, 0)
