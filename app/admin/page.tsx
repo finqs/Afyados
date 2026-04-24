@@ -60,24 +60,27 @@ export default function AdminPage() {
   const [ready, setReady] = useState(false)
   const [token, setToken] = useState('')
 
-  // Form state
+  // Aba ativa
+  const [aba, setAba] = useState<'provas' | 'simulados'>('provas')
+
+  // ── Campos de PROVA ──
   const [materia, setMateria] = useState('')
   const [periodo, setPeriodo] = useState('')
   const [ano, setAno] = useState('')
   const [semestre, setSemestre] = useState('1')
 
-  // AI mode
+  // ── Campos de SIMULADO ──
+  const [simMateria, setSimMateria] = useState('')
+  const [simDificuldade, setSimDificuldade] = useState('medio')
+
+  // ── Extração compartilhada ──
   const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [jsonTexto, setJsonTexto] = useState('')
   const [extraindo, setExtraindo] = useState(false)
 
-  // Manual mode
-  const [jsonTexto, setJsonTexto] = useState('')
-
-  // Status
+  // ── Status e preview ──
   const [status, setStatus] = useState('')
   const [statusType, setStatusType] = useState<'info' | 'sucesso' | 'erro'>('info')
-
-  // Questions
   const [questoes, setQuestoes] = useState<QuestaoExtraida[]>([])
   const [salvando, setSalvando] = useState(false)
 
@@ -85,52 +88,60 @@ export default function AdminPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace('/login'); return }
       if (session.user.app_metadata?.role !== 'admin') {
-        // Redireciona direto; login.html protegido e home exibe apenas para logado
-        router.replace('/')
-        return
+        router.replace('/'); return
       }
       setToken(session.access_token)
       setReady(true)
     })
   }, [router])
 
+  // Trocar de aba limpa preview e status
+  const trocarAba = (nova: 'provas' | 'simulados') => {
+    setAba(nova)
+    setQuestoes([])
+    setStatus('')
+    setPdfFile(null)
+    setJsonTexto('')
+  }
+
   const setStatusMsg = (msg: string, type: 'info' | 'sucesso' | 'erro' = 'info') => {
     setStatus(msg)
     setStatusType(type)
   }
 
+  // ── Validações por aba ──
   const getDadosProva = () => {
     if (!materia.trim()) { setStatusMsg('Preencha o campo Matéria.', 'erro'); return null }
     if (periodo === '') { setStatusMsg('Selecione o Período.', 'erro'); return null }
     if (!ano) { setStatusMsg('Preencha o Ano.', 'erro'); return null }
     const periodoNum = parseInt(periodo)
     const anoNum = parseInt(ano)
-    if (isNaN(periodoNum) || periodoNum < 1) {
-      setStatusMsg('Período inválido.', 'erro'); return null
-    }
-    if (isNaN(anoNum) || anoNum < 2000 || anoNum > 2100) {
-      setStatusMsg('Ano inválido.', 'erro'); return null
-    }
+    if (isNaN(periodoNum) || periodoNum < 1) { setStatusMsg('Período inválido.', 'erro'); return null }
+    if (isNaN(anoNum) || anoNum < 2000 || anoNum > 2100) { setStatusMsg('Ano inválido.', 'erro'); return null }
     return { materia: materia.trim(), periodoNum, ano, semestre }
   }
 
+  const getDadosSimulado = () => {
+    if (!simMateria.trim()) { setStatusMsg('Preencha a Matéria.', 'erro'); return null }
+    return { materia: simMateria.trim(), dificuldade: simDificuldade }
+  }
+
+  const validarCampos = () =>
+    aba === 'provas' ? getDadosProva() !== null : getDadosSimulado() !== null
+
+  // ── Extração compartilhada ──
   const handleExtrair = async () => {
-    const dados = getDadosProva()
-    if (!dados) return
+    if (!validarCampos()) return
     if (!pdfFile) { setStatusMsg('Selecione um PDF.', 'erro'); return }
     if (pdfFile.size > 10 * 1024 * 1024) { setStatusMsg('O PDF deve ter no máximo 10MB.', 'erro'); return }
 
     setExtraindo(true)
     setStatusMsg('🤖 Enviando PDF para o Claude...', 'info')
-
     try {
       const base64 = await fileToBase64(pdfFile)
       const res = await fetch('/api/extrair', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ pdfBase64: base64 })
       })
       const data = await res.json()
@@ -146,8 +157,7 @@ export default function AdminPage() {
   }
 
   const handleCarregarJson = () => {
-    const dados = getDadosProva()
-    if (!dados) return
+    if (!validarCampos()) return
     if (!jsonTexto.trim()) { setStatusMsg('Cole o JSON no campo abaixo.', 'erro'); return }
     if (jsonTexto.length > 500_000) { setStatusMsg('JSON muito grande (max 500KB).', 'erro'); return }
     try {
@@ -160,7 +170,8 @@ export default function AdminPage() {
     }
   }
 
-  const handleSalvar = async () => {
+  // ── Salvar PROVA ──
+  const handleSalvarProva = async () => {
     const dados = getDadosProva()
     if (!dados) return
     if (!questoes.length) { setStatusMsg('Nenhuma questão para salvar.', 'erro'); return }
@@ -175,12 +186,7 @@ export default function AdminPage() {
 
       const { data: prova, error: provaError } = await supabase
         .from('provas')
-        .insert({
-          materia: dados.materia,
-          periodo: dados.periodoNum,
-          ano: anoSalvo,
-          semestre: semestreSalvo
-        })
+        .insert({ materia: dados.materia, periodo: dados.periodoNum, ano: anoSalvo, semestre: semestreSalvo })
         .select()
         .single()
 
@@ -202,16 +208,11 @@ export default function AdminPage() {
 
       const { error: questoesError } = await supabase.from('questoes').insert(questoesParaSalvar)
       if (questoesError) {
-        // Rollback: remove a prova órfã antes de falhar
-        const { error: rollbackError } = await supabase.from('provas').delete().eq('id', prova.id)
-        if (rollbackError) {
-          console.error('Falha no rollback da prova órfã:', rollbackError.message)
-        }
+        await supabase.from('provas').delete().eq('id', prova.id)
         throw new Error('Erro ao salvar questões: ' + questoesError.message)
       }
 
       setStatusMsg('✅ Prova e questões salvas com sucesso!', 'sucesso')
-      // Limpa preview para evitar re-salvar acidentalmente
       setQuestoes([])
     } catch (err) {
       setStatusMsg(`❌ ${(err as Error).message}`, 'erro')
@@ -219,6 +220,43 @@ export default function AdminPage() {
       setSalvando(false)
     }
   }
+
+  // ── Salvar SIMULADO ──
+  const handleSalvarSimulado = async () => {
+    const dados = getDadosSimulado()
+    if (!dados) return
+    if (!questoes.length) { setStatusMsg('Nenhuma questão para salvar.', 'erro'); return }
+
+    setSalvando(true)
+    try {
+      const questoesParaSalvar = questoes.map(q => ({
+        materia: dados.materia,
+        dificuldade: dados.dificuldade,
+        numero: q.numero,
+        tipo: q.tipo ?? 'multipla_escolha',
+        enunciado: q.enunciado,
+        alternativa_a: q.alternativa_a,
+        alternativa_b: q.alternativa_b,
+        alternativa_c: q.alternativa_c,
+        alternativa_d: q.alternativa_d,
+        alternativa_e: q.alternativa_e ?? '',
+        gabarito: q.gabarito,
+        comentario: q.comentario ?? ''
+      }))
+
+      const { error } = await supabase.from('simulados_questoes').insert(questoesParaSalvar)
+      if (error) throw new Error(error.message)
+
+      setStatusMsg(`✅ ${questoes.length} questões adicionadas ao banco de "${dados.materia}"!`, 'sucesso')
+      setQuestoes([])
+    } catch (err) {
+      setStatusMsg(`❌ ${(err as Error).message}`, 'erro')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  const handleSalvar = () => aba === 'provas' ? handleSalvarProva() : handleSalvarSimulado()
 
   const statusColor = statusType === 'sucesso' ? '#4ade80' : statusType === 'erro' ? '#f87171' : 'var(--blue-neon)'
 
@@ -236,112 +274,108 @@ export default function AdminPage() {
       </nav>
 
       <main className="admin-main">
-        <div className="admin-card">
-          <div className="sobre-label">NOVA PROVA</div>
-          <div className="admin-form">
-            <div className="admin-row">
-              <div className="input-group">
-                <label className="input-label">Matéria</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Ex: SOI 1"
-                  value={materia}
-                  onChange={e => setMateria(e.target.value)}
-                />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Período</label>
-                <select
-                  className="input-field"
-                  value={periodo}
-                  onChange={e => setPeriodo(e.target.value)}
-                >
-                  <option value="">Selecionar</option>
-                  <option value="1">1º Período</option>
-                  <option value="2">2º Período</option>
-                  <option value="3">3º Período</option>
-                  <option value="4">4º Período</option>
-                  <option value="5">5º Período</option>
-                  <option value="6">6º Período</option>
-                  <option value="7">7º Período</option>
-                  <option value="8">8º Período</option>
-                  <option value="9">Internato</option>
-                </select>
-              </div>
-              <div className="input-group">
-                <label className="input-label">Ano</label>
-                <input
-                  type="number"
-                  className="input-field"
-                  placeholder="Ex: 2023"
-                  value={ano}
-                  onChange={e => setAno(e.target.value)}
-                />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Semestre</label>
-                <select
-                  className="input-field"
-                  value={semestre}
-                  onChange={e => setSemestre(e.target.value)}
-                >
-                  <option value="1">1º semestre</option>
-                  <option value="2">2º semestre</option>
-                </select>
-              </div>
-            </div>
 
-            {/* MODO IA */}
-            <div className="admin-card" style={{ marginTop: '8px' }}>
-              <div className="sobre-label">MODO IA · CLAUDE</div>
-              <div className="admin-form" style={{ marginTop: '16px' }}>
-                <div className="input-group">
-                  <label className="input-label">PDF da prova</label>
-                  <input
-                    type="file"
-                    className="input-field"
-                    accept=".pdf"
-                    onChange={e => setPdfFile(e.target.files?.[0] ?? null)}
-                  />
-                </div>
-                <button
-                  className="btn-primary"
-                  onClick={handleExtrair}
-                  disabled={extraindo}
-                >
-                  {extraindo ? '🤖 Extraindo...' : '🤖 Extrair questões com IA'}
-                </button>
-              </div>
-            </div>
-
-            {/* MODO MANUAL */}
-            <div className="admin-card" style={{ marginTop: '8px' }}>
-              <div className="sobre-label">MODO MANUAL · COLAR JSON</div>
-              <div className="admin-form" style={{ marginTop: '16px' }}>
-                <div className="input-group">
-                  <label className="input-label">Cole o JSON aqui</label>
-                  <textarea
-                    className="input-field"
-                    rows={8}
-                    placeholder='[{"numero":1,"enunciado":"...","alternativa_a":"...","alternativa_b":"...","alternativa_c":"...","alternativa_d":"...","gabarito":"A","comentario":"..."}]'
-                    value={jsonTexto}
-                    onChange={e => setJsonTexto(e.target.value)}
-                  />
-                </div>
-                <button
-                  className="btn-primary"
-                  style={{ background: 'var(--surface2)', border: '1px solid var(--accent-border)', color: 'var(--accent)' }}
-                  onClick={handleCarregarJson}
-                >
-                  📋 Carregar JSON
-                </button>
-              </div>
-            </div>
-
-            <p className="admin-status" style={{ color: statusColor }}>{status}</p>
-          </div>
+        {/* ABAS */}
+        <div className="admin-tabs">
+          <button
+            className={`admin-tab${aba === 'provas' ? ' active' : ''}`}
+            onClick={() => trocarAba('provas')}
+          >
+            📄 Provas
+          </button>
+          <button
+            className={`admin-tab${aba === 'simulados' ? ' active' : ''}`}
+            onClick={() => trocarAba('simulados')}
+          >
+            📝 Simulados
+          </button>
         </div>
+
+        {/* ─────────── ABA PROVAS ─────────── */}
+        {aba === 'provas' && (
+          <div className="admin-card">
+            <div className="sobre-label">NOVA PROVA</div>
+            <div className="admin-form">
+              <div className="admin-row">
+                <div className="input-group">
+                  <label className="input-label">Matéria</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Ex: SOI 1"
+                    value={materia}
+                    onChange={e => setMateria(e.target.value)}
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Período</label>
+                  <select className="input-field" value={periodo} onChange={e => setPeriodo(e.target.value)}>
+                    <option value="">Selecionar</option>
+                    <option value="1">1º Período</option>
+                    <option value="2">2º Período</option>
+                    <option value="3">3º Período</option>
+                    <option value="4">4º Período</option>
+                    <option value="5">5º Período</option>
+                    <option value="6">6º Período</option>
+                    <option value="7">7º Período</option>
+                    <option value="8">8º Período</option>
+                    <option value="9">Internato</option>
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Ano</label>
+                  <input
+                    type="number"
+                    className="input-field"
+                    placeholder="Ex: 2023"
+                    value={ano}
+                    onChange={e => setAno(e.target.value)}
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Semestre</label>
+                  <select className="input-field" value={semestre} onChange={e => setSemestre(e.target.value)}>
+                    <option value="1">1º semestre</option>
+                    <option value="2">2º semestre</option>
+                  </select>
+                </div>
+              </div>
+              {renderExtracao()}
+              <p className="admin-status" style={{ color: statusColor }}>{status}</p>
+            </div>
+          </div>
+        )}
+
+        {/* ─────────── ABA SIMULADOS ─────────── */}
+        {aba === 'simulados' && (
+          <div className="admin-card">
+            <div className="sobre-label">BANCO DE QUESTÕES · SIMULADOS</div>
+            <div className="admin-form">
+              <div className="admin-row admin-row--2col">
+                <div className="input-group">
+                  <label className="input-label">Matéria</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Ex: SOI, HAM, IESC..."
+                    value={simMateria}
+                    onChange={e => setSimMateria(e.target.value)}
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Dificuldade</label>
+                  <select className="input-field" value={simDificuldade} onChange={e => setSimDificuldade(e.target.value)}>
+                    <option value="facil">Fácil</option>
+                    <option value="medio">Médio</option>
+                    <option value="dificil">Difícil</option>
+                  </select>
+                </div>
+              </div>
+              {renderExtracao()}
+              <p className="admin-status" style={{ color: statusColor }}>{status}</p>
+            </div>
+          </div>
+        )}
 
         {/* QUESTÕES PREVIEW */}
         {questoes.length > 0 && (
@@ -374,13 +408,66 @@ export default function AdminPage() {
               className="btn-salvar-prova"
               onClick={handleSalvar}
               disabled={salvando}
-              id="btn-salvar"
             >
-              {salvando ? 'Salvando...' : 'Salvar prova no banco de dados'}
+              {salvando
+                ? 'Salvando...'
+                : aba === 'provas'
+                  ? 'Salvar prova no banco de dados'
+                  : 'Adicionar questões ao banco de simulados'}
             </button>
           </div>
         )}
       </main>
     </>
   )
+
+  // ── JSX compartilhado de extração ──
+  function renderExtracao() {
+    return (
+      <>
+        {/* MODO IA */}
+        <div className="admin-card" style={{ marginTop: '8px' }}>
+          <div className="sobre-label">MODO IA · CLAUDE</div>
+          <div className="admin-form" style={{ marginTop: '16px' }}>
+            <div className="input-group">
+              <label className="input-label">PDF da prova</label>
+              <input
+                type="file"
+                className="input-field"
+                accept=".pdf"
+                onChange={e => setPdfFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            <button className="btn-primary" onClick={handleExtrair} disabled={extraindo}>
+              {extraindo ? '🤖 Extraindo...' : '🤖 Extrair questões com IA'}
+            </button>
+          </div>
+        </div>
+
+        {/* MODO MANUAL */}
+        <div className="admin-card" style={{ marginTop: '8px' }}>
+          <div className="sobre-label">MODO MANUAL · COLAR JSON</div>
+          <div className="admin-form" style={{ marginTop: '16px' }}>
+            <div className="input-group">
+              <label className="input-label">Cole o JSON aqui</label>
+              <textarea
+                className="input-field"
+                rows={8}
+                placeholder='[{"numero":1,"enunciado":"...","alternativa_a":"...","alternativa_b":"...","alternativa_c":"...","alternativa_d":"...","gabarito":"A","comentario":"..."}]'
+                value={jsonTexto}
+                onChange={e => setJsonTexto(e.target.value)}
+              />
+            </div>
+            <button
+              className="btn-primary"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--accent-border)', color: 'var(--accent)' }}
+              onClick={handleCarregarJson}
+            >
+              📋 Carregar JSON
+            </button>
+          </div>
+        </div>
+      </>
+    )
+  }
 }

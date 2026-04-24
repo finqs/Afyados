@@ -549,13 +549,32 @@ export default function HomePage() {
                   <div className="modal-btn-desc">Em breve</div>
                 </div>
               </button>
-              <button className="modal-btn modal-btn-disabled">
-                <span className="modal-btn-icon">🤖</span>
-                <div>
-                  <div className="modal-btn-title">Análise por IA</div>
-                  <div className="modal-btn-desc">Em breve</div>
-                </div>
-              </button>
+              {/* Botão 4: específico por matéria */}
+              {modalSubject.toUpperCase().includes('SOI') ? (
+                <button className="modal-btn modal-btn-disabled">
+                  <span className="modal-btn-icon">🏥</span>
+                  <div>
+                    <div className="modal-btn-title">Multiestações</div>
+                    <div className="modal-btn-desc">Em breve</div>
+                  </div>
+                </button>
+              ) : modalSubject.toUpperCase().includes('HAM') ? (
+                <button className="modal-btn modal-btn-disabled">
+                  <span className="modal-btn-icon">🩺</span>
+                  <div>
+                    <div className="modal-btn-title">Simulado OSCE</div>
+                    <div className="modal-btn-desc">Em breve</div>
+                  </div>
+                </button>
+              ) : (
+                <button className="modal-btn modal-btn-disabled">
+                  <span className="modal-btn-icon">🤖</span>
+                  <div>
+                    <div className="modal-btn-title">Análise por IA</div>
+                    <div className="modal-btn-desc">Em breve</div>
+                  </div>
+                </button>
+              )}
             </div>
           ) : (
             <div className="modal-actions">

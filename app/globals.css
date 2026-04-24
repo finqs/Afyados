@@ -1038,6 +1038,17 @@ textarea:focus-visible {
 .admin-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; }
 .admin-form { display: flex; flex-direction: column; gap: 16px; margin-top: 20px; }
 .admin-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; }
+.admin-row--2col { grid-template-columns: 2fr 1fr; }
+
+/* Admin tabs */
+.admin-tabs { display: flex; gap: 4px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 4px; }
+.admin-tab {
+  flex: 1; padding: 10px 20px; border: none; border-radius: calc(var(--radius-md) - 2px);
+  background: transparent; color: var(--muted); font-size: 14px; font-weight: 600;
+  font-family: var(--font-body); cursor: pointer; transition: var(--transition);
+}
+.admin-tab:hover { color: var(--white); background: var(--surface2); }
+.admin-tab.active { background: var(--accent); color: white; }
 .admin-status { font-size: 14px; color: var(--blue-neon); min-height: 20px; }
 .questao-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 24px; display: flex; flex-direction: column; gap: 12px; }
 .questao-enunciado-admin { font-size: 14px; line-height: 1.7; color: var(--white); }
