@@ -1,5 +1,5 @@
-export function escapeHtml(text) {
-  return String(text || '')
+export function escapeHtml(text: string | number | null | undefined): string {
+  return String(text ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -7,15 +7,18 @@ export function escapeHtml(text) {
     .replace(/'/g, '&#039;')
 }
 
-export function cleanText(value) {
+export function cleanText(value: string | null | undefined): string {
   if (value === null || value === undefined) return ''
   return String(value).replace(/\s+/g, ' ').trim()
 }
 
-export function fileToBase64(file) {
+export function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => resolve(reader.result.split(',')[1])
+    reader.onload = () => {
+      const result = reader.result as string
+      resolve(result.split(',')[1])
+    }
     reader.onerror = reject
     reader.readAsDataURL(file)
   })
