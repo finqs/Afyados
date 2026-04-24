@@ -99,17 +99,17 @@ export default function AdminPage() {
 
   const getDadosProva = () => {
     if (!materia.trim()) { setStatusMsg('Preencha o campo Matéria.', 'erro'); return null }
-    if (!isIntegradora && periodo === '') { setStatusMsg('Selecione o Período.', 'erro'); return null }
+    if (periodo === '') { setStatusMsg('Selecione o Período.', 'erro'); return null }
     if (!ano) { setStatusMsg('Preencha o Ano.', 'erro'); return null }
-    const periodoNum = isIntegradora ? 0 : parseInt(periodo)
+    const periodoNum = parseInt(periodo)
     const anoNum = parseInt(ano)
-    if (!isIntegradora && (isNaN(periodoNum) || periodoNum < 1)) {
+    if (isNaN(periodoNum) || periodoNum < 1) {
       setStatusMsg('Período inválido.', 'erro'); return null
     }
     if (isNaN(anoNum) || anoNum < 2000 || anoNum > 2100) {
       setStatusMsg('Ano inválido.', 'erro'); return null
     }
-    return { materia: materia.trim(), periodo, ano, semestre }
+    return { materia: materia.trim(), periodoNum, ano, semestre }
   }
 
   const handleExtrair = async () => {
@@ -165,10 +165,9 @@ export default function AdminPage() {
 
     setSalvando(true)
     try {
-      const periodoSalvo = parseInt(dados.periodo)
       const anoSalvo = parseInt(dados.ano)
       const semestreSalvo = parseInt(dados.semestre)
-      if (isNaN(periodoSalvo) || isNaN(anoSalvo) || isNaN(semestreSalvo)) {
+      if (isNaN(dados.periodoNum) || isNaN(anoSalvo) || isNaN(semestreSalvo)) {
         throw new Error('Período, ano ou semestre inválidos.')
       }
 
@@ -176,7 +175,7 @@ export default function AdminPage() {
         .from('provas')
         .insert({
           materia: dados.materia,
-          periodo: periodoSalvo,
+          periodo: dados.periodoNum,
           ano: anoSalvo,
           semestre: semestreSalvo
         })
@@ -246,8 +245,6 @@ export default function AdminPage() {
                   className="input-field"
                   value={periodo}
                   onChange={e => setPeriodo(e.target.value)}
-                  disabled={isIntegradora}
-                  style={isIntegradora ? { opacity: 0.4, pointerEvents: 'none' } : undefined}
                 >
                   <option value="">Selecionar</option>
                   <option value="1">1º Período</option>
@@ -289,17 +286,14 @@ export default function AdminPage() {
               <input
                 type="checkbox"
                 checked={isIntegradora}
-                onChange={e => {
-                  setIsIntegradora(e.target.checked)
-                  if (e.target.checked) setPeriodo('')
-                }}
+                onChange={e => setIsIntegradora(e.target.checked)}
               />
               <span className="integradora-toggle__box">
                 <span className="integradora-toggle__check">✓</span>
               </span>
               <div className="integradora-toggle__text">
                 <span className="integradora-toggle__label">Prova Integradora</span>
-                <span className="integradora-toggle__desc">Une as disciplinas de SOI, IESC e HAM · ignora o campo Período</span>
+                <span className="integradora-toggle__desc">Une as disciplinas de SOI, IESC e HAM · selecione o período correspondente</span>
               </div>
             </label>
 
