@@ -19,11 +19,13 @@ const PERIODOS = [
   { label: '6º Período', value: '6' },
   { label: '7º Período', value: '7' },
   { label: '8º Período', value: '8' },
+  { label: 'Integradora', value: 'integradora' },
   { label: 'Internato', value: 'internato' },
 ]
 
 function periodoLabel(periodo: string) {
   if (periodo === 'internato') return 'Internato'
+  if (periodo === 'integradora') return 'Integradora'
   return `${periodo}º Período`
 }
 
@@ -109,10 +111,12 @@ export default function HomePage() {
     setLoadingMaterias(true)
     setMaterias([])
     const periodoNum = parseInt(periodo)
-    const isInternato = isNaN(periodoNum)
+    const isInternato = !isNaN(periodoNum) && periodoNum >= 9
+    const isIntegradora = periodo === 'integradora'
 
     let query = supabase.from('provas').select('materia')
-    if (isInternato) query = query.gte('periodo', 9)
+    if (isIntegradora) query = query.eq('periodo', 0)
+    else if (isInternato || isNaN(periodoNum)) query = query.gte('periodo', 9)
     else query = query.eq('periodo', periodoNum)
 
     const { data, error } = await query
@@ -161,9 +165,11 @@ export default function HomePage() {
 
     const { nome, periodo } = modalMateriaAtiva
     const periodoNum = parseInt(periodo)
+    const isIntegradora = periodo === 'integradora'
 
     let query = supabase.from('provas').select('*').eq('materia', nome).order('ano')
-    if (!isNaN(periodoNum)) query = query.eq('periodo', periodoNum)
+    if (isIntegradora) query = query.eq('periodo', 0)
+    else if (!isNaN(periodoNum)) query = query.eq('periodo', periodoNum)
 
     const { data, error } = await query
     setLoadingProvas(false)
@@ -414,6 +420,7 @@ export default function HomePage() {
                   key={p.value}
                   className={cls}
                   data-periodo={p.value}
+                  title={p.value === 'integradora' ? 'Prova que une SOI, IESC e HAM' : undefined}
                   onClick={() => handlePillClick(p.value)}
                 >
                   {p.label}
@@ -425,6 +432,18 @@ export default function HomePage() {
           <div className="periods__content" id="materias-grid">
             {loadingMaterias && (
               <div className="loading-text">Carregando matérias...</div>
+            )}
+            {!loadingMaterias && periodoAtivo === 'integradora' && materias.length > 0 && (
+              <div className="integradora-banner">
+                <span className="integradora-banner__icon">🔗</span>
+                <div>
+                  <strong>Prova Integradora</strong>
+                  <span>Une as disciplinas de SOI, IESC e HAM</span>
+                </div>
+                <div className="integradora-banner__tags">
+                  <span>SOI</span><span>IESC</span><span>HAM</span>
+                </div>
+              </div>
             )}
             {!loadingMaterias && periodoAtivo && materias.length === 0 && (
               <div className="loading-text">Nenhuma matéria disponível para este período.</div>

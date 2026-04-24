@@ -454,6 +454,35 @@ textarea:focus-visible {
 .periodo-rec__link { font-size: 0.8rem; color: var(--muted); white-space: nowrap; transition: var(--transition); text-decoration: none; flex-shrink: 0; }
 .periodo-rec__link:hover { color: var(--blue-neon); }
 
+/* Integradora info banner */
+.integradora-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(99,102,241,0.07);
+  border: 1px solid rgba(99,102,241,0.22);
+  border-radius: var(--radius-lg);
+  padding: 14px 20px;
+  margin-bottom: 8px;
+  animation: fade-in 0.4s ease;
+}
+.integradora-banner__icon { font-size: 1.4rem; flex-shrink: 0; }
+.integradora-banner > div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.integradora-banner strong { font-size: 0.9rem; font-weight: 700; color: var(--white); }
+.integradora-banner span { font-size: 0.82rem; color: var(--muted); }
+.integradora-banner__tags { display: flex; gap: 6px; flex-shrink: 0; }
+.integradora-banner__tags span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: rgba(99,102,241,0.15);
+  border: 1px solid rgba(99,102,241,0.3);
+  color: #a5b4fc;
+}
+
 .periods__tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 40px; }
 
 .period-tab {

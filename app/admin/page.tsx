@@ -98,12 +98,13 @@ export default function AdminPage() {
 
   const getDadosProva = () => {
     if (!materia.trim()) { setStatusMsg('Preencha o campo Matéria.', 'erro'); return null }
-    if (!periodo) { setStatusMsg('Selecione o Período.', 'erro'); return null }
+    if (periodo === '') { setStatusMsg('Selecione o Período.', 'erro'); return null }
     if (!ano) { setStatusMsg('Preencha o Ano.', 'erro'); return null }
     const periodoNum = parseInt(periodo)
     const anoNum = parseInt(ano)
-    if (isNaN(periodoNum) || periodoNum < 1 || periodoNum > 8) {
-      setStatusMsg('Período inválido (use 1–8).', 'erro'); return null
+    // Válidos: 0 (Integradora), 1–8 (períodos), 9+ (internato)
+    if (isNaN(periodoNum) || periodoNum < 0) {
+      setStatusMsg('Período inválido.', 'erro'); return null
     }
     if (isNaN(anoNum) || anoNum < 2000 || anoNum > 2100) {
       setStatusMsg('Ano inválido.', 'erro'); return null
@@ -241,13 +242,23 @@ export default function AdminPage() {
               </div>
               <div className="input-group">
                 <label className="input-label">Período</label>
-                <input
-                  type="number"
+                <select
                   className="input-field"
-                  placeholder="Ex: 1"
                   value={periodo}
                   onChange={e => setPeriodo(e.target.value)}
-                />
+                >
+                  <option value="">Selecionar</option>
+                  <option value="1">1º Período</option>
+                  <option value="2">2º Período</option>
+                  <option value="3">3º Período</option>
+                  <option value="4">4º Período</option>
+                  <option value="5">5º Período</option>
+                  <option value="6">6º Período</option>
+                  <option value="7">7º Período</option>
+                  <option value="8">8º Período</option>
+                  <option value="0">Integradora</option>
+                  <option value="9">Internato</option>
+                </select>
               </div>
               <div className="input-group">
                 <label className="input-label">Ano</label>
