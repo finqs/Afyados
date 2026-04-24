@@ -101,7 +101,7 @@ export default function HomePage() {
       return
     }
 
-    const unique = [...new Set(data.map((p: { materia: string }) => p.materia))].sort()
+    const unique = Array.from(new Set(data.map((p: { materia: string }) => p.materia))).sort()
     setMaterias(unique.map(nome => ({ nome, periodo })))
     setLoadingMaterias(false)
   }, [])
