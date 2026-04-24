@@ -101,6 +101,27 @@
 
     .loading-text { text-align: center; color: var(--muted); padding: 40px; }
 
+    .config-row { display: flex; flex-direction: column; gap: 6px; max-width: 320px; }
+    .config-label { font-size: 0.82rem; font-weight: 500; color: var(--muted); }
+    .config-select {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+      font-size: 0.9rem;
+      color: var(--white);
+      font-family: var(--font-body);
+      transition: var(--transition);
+      outline: none;
+      width: 100%;
+      cursor: pointer;
+    }
+    .config-select:focus { border-color: var(--border-glow); box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+    .config-select option { background: #0d1117; color: var(--white); }
+    .config-hint { font-size: 0.78rem; color: var(--muted-dim); }
+    .config-btn { margin-top: 4px; align-self: flex-start; }
+    .config-msg { font-size: 0.82rem; min-height: 18px; transition: var(--transition); }
+
     @media (max-width: 700px) { .stats-grid { grid-template-columns: repeat(2,1fr); } }
     @media (max-width: 480px) { .perfil-hero { flex-direction: column; text-align: center; } }
   </style>
@@ -163,6 +184,28 @@
     <div class="perfil-card">
       <div class="perfil-card-label">Acertos por matéria</div>
       <div id="materias-lista"></div>
+    </div>
+
+    <div class="perfil-card" id="config">
+      <div class="perfil-card-label">Configurações do perfil</div>
+      <div class="config-row">
+        <label class="config-label" for="perfil-periodo">Período atual</label>
+        <select id="perfil-periodo" class="config-select">
+          <option value="">Não informado</option>
+          <option value="1">1º Período</option>
+          <option value="2">2º Período</option>
+          <option value="3">3º Período</option>
+          <option value="4">4º Período</option>
+          <option value="5">5º Período</option>
+          <option value="6">6º Período</option>
+          <option value="7">7º Período</option>
+          <option value="8">8º Período</option>
+          <option value="internato">Internato</option>
+        </select>
+        <span class="config-hint">O site recomendará provas e matérias do seu período na página inicial.</span>
+        <button class="btn btn--primary config-btn" id="btn-salvar-periodo">Salvar</button>
+        <p class="config-msg" id="periodo-msg"></p>
+      </div>
     </div>
 
   </main>

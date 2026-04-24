@@ -19,6 +19,41 @@ async function init() {
     window.location.href = 'index.html'
   })
 
+  // Período config
+  const selectPeriodo = document.getElementById('perfil-periodo')
+  const btnSalvarPeriodo = document.getElementById('btn-salvar-periodo')
+  const periodoMsg = document.getElementById('periodo-msg')
+
+  if (selectPeriodo) {
+    selectPeriodo.value = user.user_metadata?.periodo || ''
+  }
+
+  if (btnSalvarPeriodo) {
+    btnSalvarPeriodo.addEventListener('click', async () => {
+      const novoPeriodo = selectPeriodo.value || null
+      btnSalvarPeriodo.disabled = true
+      btnSalvarPeriodo.textContent = 'Salvando...'
+
+      const { error } = await supabase.auth.updateUser({
+        data: { periodo: novoPeriodo }
+      })
+
+      if (error) {
+        periodoMsg.style.color = '#f87171'
+        periodoMsg.textContent = 'Erro ao salvar. Tente novamente.'
+      } else {
+        periodoMsg.style.color = '#4ade80'
+        const label = novoPeriodo === 'internato' ? 'Internato'
+          : novoPeriodo ? `${novoPeriodo}º Período` : 'não definido'
+        periodoMsg.textContent = `✓ Período salvo: ${label}`
+        setTimeout(() => { periodoMsg.textContent = '' }, 3500)
+      }
+
+      btnSalvarPeriodo.disabled = false
+      btnSalvarPeriodo.textContent = 'Salvar'
+    })
+  }
+
   await carregarDados(user.id)
 }
 

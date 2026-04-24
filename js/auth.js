@@ -45,6 +45,7 @@ if (btnCadastro) {
     const nome = document.getElementById('nome').value
     const email = document.getElementById('email').value
     const senha = document.getElementById('senha').value
+    const periodo = document.getElementById('periodo')?.value || null
 
     if (!nome || !email || !senha) {
       authError.textContent = 'Preencha todos os campos.'
@@ -60,10 +61,13 @@ if (btnCadastro) {
     btnCadastro.textContent = 'Criando conta...'
     btnCadastro.disabled = true
 
+    const userData = { nome }
+    if (periodo) userData.periodo = periodo
+
     const { error } = await supabase.auth.signUp({
       email,
       password: senha,
-      options: { data: { nome } }
+      options: { data: userData }
     })
 
     if (error) {

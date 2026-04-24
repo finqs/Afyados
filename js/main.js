@@ -74,6 +74,38 @@ if (btnPerfil) btnPerfil.addEventListener('click', () => { window.location.href 
 async function verificarSessao() {
   const { data: { session } } = await supabase.auth.getSession()
   atualizarBotaoSessao(session)
+  if (session?.user?.user_metadata?.periodo) {
+    mostrarRecomendacaoPeriodo(session.user.user_metadata.periodo)
+  }
+}
+
+function periodoLabel(periodo) {
+  if (periodo === 'internato') return 'Internato'
+  return `${periodo}º Período`
+}
+
+function mostrarRecomendacaoPeriodo(periodo) {
+  const banner = document.getElementById('periodo-rec')
+  const bannerLabel = document.getElementById('periodo-rec-label')
+  if (banner && bannerLabel) {
+    bannerLabel.textContent = `Mostrando matérias do ${periodoLabel(periodo)}`
+    banner.style.display = 'flex'
+  }
+
+  // Mark the matching tab visually as "Seu período"
+  if (pillsContainer) {
+    const pill = pillsContainer.querySelector(`[data-periodo="${periodo}"]`)
+    if (pill) pill.classList.add('period-tab--recommended')
+  }
+
+  // Auto-activate the user's period
+  const pill = pillsContainer?.querySelector(`[data-periodo="${periodo}"]`)
+  if (pill && periodoAtivo !== periodo) {
+    pillsContainer.querySelectorAll('.pill, .period-tab').forEach(p => p.classList.remove('active'))
+    pill.classList.add('active')
+    periodoAtivo = periodo
+    carregarMaterias(periodo)
+  }
 }
 
 function atualizarBotaoSessao(session) {
