@@ -60,6 +60,7 @@ export default function AdminPage() {
   // Form state
   const [materia, setMateria] = useState('')
   const [periodo, setPeriodo] = useState('')
+  const [isIntegradora, setIsIntegradora] = useState(false)
   const [ano, setAno] = useState('')
   const [semestre, setSemestre] = useState('1')
 
@@ -98,12 +99,11 @@ export default function AdminPage() {
 
   const getDadosProva = () => {
     if (!materia.trim()) { setStatusMsg('Preencha o campo Matéria.', 'erro'); return null }
-    if (periodo === '') { setStatusMsg('Selecione o Período.', 'erro'); return null }
+    if (!isIntegradora && periodo === '') { setStatusMsg('Selecione o Período.', 'erro'); return null }
     if (!ano) { setStatusMsg('Preencha o Ano.', 'erro'); return null }
-    const periodoNum = parseInt(periodo)
+    const periodoNum = isIntegradora ? 0 : parseInt(periodo)
     const anoNum = parseInt(ano)
-    // Válidos: 0 (Integradora), 1–8 (períodos), 9+ (internato)
-    if (isNaN(periodoNum) || periodoNum < 0) {
+    if (!isIntegradora && (isNaN(periodoNum) || periodoNum < 1)) {
       setStatusMsg('Período inválido.', 'erro'); return null
     }
     if (isNaN(anoNum) || anoNum < 2000 || anoNum > 2100) {
@@ -246,6 +246,8 @@ export default function AdminPage() {
                   className="input-field"
                   value={periodo}
                   onChange={e => setPeriodo(e.target.value)}
+                  disabled={isIntegradora}
+                  style={isIntegradora ? { opacity: 0.4, pointerEvents: 'none' } : undefined}
                 >
                   <option value="">Selecionar</option>
                   <option value="1">1º Período</option>
@@ -256,7 +258,6 @@ export default function AdminPage() {
                   <option value="6">6º Período</option>
                   <option value="7">7º Período</option>
                   <option value="8">8º Período</option>
-                  <option value="0">Integradora</option>
                   <option value="9">Internato</option>
                 </select>
               </div>
@@ -282,6 +283,25 @@ export default function AdminPage() {
                 </select>
               </div>
             </div>
+
+            {/* TOGGLE INTEGRADORA */}
+            <label className="integradora-toggle">
+              <input
+                type="checkbox"
+                checked={isIntegradora}
+                onChange={e => {
+                  setIsIntegradora(e.target.checked)
+                  if (e.target.checked) setPeriodo('')
+                }}
+              />
+              <span className="integradora-toggle__box">
+                <span className="integradora-toggle__check">✓</span>
+              </span>
+              <div className="integradora-toggle__text">
+                <span className="integradora-toggle__label">Prova Integradora</span>
+                <span className="integradora-toggle__desc">Une as disciplinas de SOI, IESC e HAM · ignora o campo Período</span>
+              </div>
+            </label>
 
             {/* MODO IA */}
             <div className="admin-card" style={{ marginTop: '8px' }}>
