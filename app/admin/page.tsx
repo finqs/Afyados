@@ -21,18 +21,35 @@ interface QuestaoExtraida {
 
 function normalizeQuestoes(parsed: unknown): QuestaoExtraida[] {
   const arr = Array.isArray(parsed) ? parsed : (parsed as { questoes?: unknown[] }).questoes ?? []
-  return (arr as QuestaoExtraida[]).map((q, i) => ({
-    numero: q.numero ?? i + 1,
-    tipo: q.tipo ?? 'multipla_escolha',
-    enunciado: String(q.enunciado ?? ''),
-    alternativa_a: String(q.alternativa_a ?? ''),
-    alternativa_b: String(q.alternativa_b ?? ''),
-    alternativa_c: String(q.alternativa_c ?? ''),
-    alternativa_d: String(q.alternativa_d ?? ''),
-    alternativa_e: q.alternativa_e ? String(q.alternativa_e) : '',
-    gabarito: String(q.gabarito ?? ''),
-    comentario: String(q.comentario ?? ''),
-  }))
+  if (!Array.isArray(arr) || arr.length === 0) {
+    throw new Error('JSON inválido: esperado um array de questões não vazio.')
+  }
+  return arr.map((item, i) => {
+    if (typeof item !== 'object' || item === null) {
+      throw new Error(`Questão ${i + 1}: item não é um objeto.`)
+    }
+    const q = item as Record<string, unknown>
+    const enunciado = String(q.enunciado ?? '').trim()
+    const gabarito = String(q.gabarito ?? '').trim()
+    const tipo = String(q.tipo ?? 'multipla_escolha').trim()
+    if (!enunciado) throw new Error(`Questão ${i + 1}: campo "enunciado" ausente ou vazio.`)
+    if (!gabarito) throw new Error(`Questão ${i + 1}: campo "gabarito" ausente ou vazio.`)
+    if (tipo === 'multipla_escolha' && !['A','B','C','D','E'].includes(gabarito.toUpperCase())) {
+      throw new Error(`Questão ${i + 1}: gabarito "${gabarito}" inválido para múltipla escolha.`)
+    }
+    return {
+      numero: typeof q.numero === 'number' ? q.numero : i + 1,
+      tipo,
+      enunciado,
+      alternativa_a: String(q.alternativa_a ?? ''),
+      alternativa_b: String(q.alternativa_b ?? ''),
+      alternativa_c: String(q.alternativa_c ?? ''),
+      alternativa_d: String(q.alternativa_d ?? ''),
+      alternativa_e: q.alternativa_e ? String(q.alternativa_e) : '',
+      gabarito: tipo === 'multipla_escolha' ? gabarito.toUpperCase() : gabarito,
+      comentario: String(q.comentario ?? ''),
+    }
+  })
 }
 
 export default function AdminPage() {

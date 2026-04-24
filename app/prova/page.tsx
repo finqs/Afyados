@@ -50,6 +50,7 @@ function ProvaContent() {
   // Textarea ref for open questions
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const mountedRef = useRef(true)
 
   const carregarQuestoes = useCallback(async () => {
     if (!provaId) return
@@ -97,7 +98,11 @@ function ProvaContent() {
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
   }, [])
 
   const formatTimer = () => {
@@ -180,6 +185,8 @@ function ProvaContent() {
         score: acertos
       }).eq('id', attemptId)
     }
+
+    if (!mountedRef.current) return  // component unmounted, skip state updates
 
     setResultadoScore(`${acertos}/${total}`)
     setResultadoPercent(`${percent}%`)

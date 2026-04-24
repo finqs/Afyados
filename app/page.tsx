@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { Prova } from '@/types'
@@ -33,6 +33,7 @@ export default function HomePage() {
   const [periodoAtivo, setPeriodoAtivo] = useState<string | null>(null)
   const [materias, setMaterias] = useState<MateriaInfo[]>([])
   const [loadingMaterias, setLoadingMaterias] = useState(false)
+  const pillDebounceRef = useRef<NodeJS.Timeout | null>(null)
   const [scrolled, setScrolled] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
   const [userPeriodo, setUserPeriodo] = useState<string | null>(null)
@@ -107,13 +108,14 @@ export default function HomePage() {
   }, [])
 
   const handlePillClick = (periodo: string) => {
+    if (pillDebounceRef.current) clearTimeout(pillDebounceRef.current)
     if (periodoAtivo === periodo) {
       setPeriodoAtivo(null)
       setMaterias([])
       return
     }
     setPeriodoAtivo(periodo)
-    carregarMaterias(periodo)
+    pillDebounceRef.current = setTimeout(() => carregarMaterias(periodo), 200)
   }
 
   const abrirModalMateria = (materia: MateriaInfo) => {
@@ -469,9 +471,9 @@ export default function HomePage() {
       </footer>
 
       {/* MODAL SOBRE */}
-      <div className={`modal-overlay${modalSobreOpen ? ' active' : ''}`} onClick={e => { if (e.target === e.currentTarget) setModalSobreOpen(false) }}>
+      <div role="dialog" aria-modal="true" aria-label="Sobre o projeto" className={`modal-overlay${modalSobreOpen ? ' active' : ''}`} onClick={e => { if (e.target === e.currentTarget) setModalSobreOpen(false) }}>
         <div className="modal">
-          <button className="modal-close" onClick={() => setModalSobreOpen(false)}>×</button>
+          <button className="modal-close" aria-label="Fechar" onClick={() => setModalSobreOpen(false)}>×</button>
           <div className="modal-title-bar">SOBRE O PROJETO</div>
           <p className="sobre-text">
             O <strong>MedFlow.AI</strong> é uma plataforma criada por estudantes de medicina para estudantes de medicina.
@@ -488,9 +490,9 @@ export default function HomePage() {
       </div>
 
       {/* MODAL PAINEL */}
-      <div className={`modal-overlay${modalOpen ? ' active' : ''}`} onClick={e => { if (e.target === e.currentTarget) fecharModal() }}>
+      <div role="dialog" aria-modal="true" aria-label={`Painel - ${modalSubject}`} className={`modal-overlay${modalOpen ? ' active' : ''}`} onClick={e => { if (e.target === e.currentTarget) fecharModal() }}>
         <div className="modal">
-          <button className="modal-close" onClick={fecharModal}>×</button>
+          <button className="modal-close" aria-label="Fechar" onClick={fecharModal}>×</button>
           <div className="modal-title-bar">PAINEL DE CONTROLE</div>
           <div className="modal-subject">{modalSubject}</div>
           {!showProvasList ? (
