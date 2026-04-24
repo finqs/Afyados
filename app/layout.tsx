@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import './globals.css'
 
+// Disable static prerendering — all pages use Supabase at runtime
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'MedFlow.AI — Estude medicina com inteligência',
   description: 'Plataforma gratuita de estudo em medicina. Provas antigas, simulados personalizados e diagnóstico por IA.',
