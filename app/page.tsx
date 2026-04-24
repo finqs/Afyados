@@ -19,13 +19,11 @@ const PERIODOS = [
   { label: '6º Período', value: '6' },
   { label: '7º Período', value: '7' },
   { label: '8º Período', value: '8' },
-  { label: 'Integradora', value: 'integradora' },
   { label: 'Internato', value: 'internato' },
 ]
 
 function periodoLabel(periodo: string) {
   if (periodo === 'internato') return 'Internato'
-  if (periodo === 'integradora') return 'Integradora'
   return `${periodo}º Período`
 }
 
@@ -89,13 +87,17 @@ export default function HomePage() {
         setUserPeriodo(null)
         return
       }
-      if (s?.user?.user_metadata?.periodo) {
-        setUserPeriodo(s.user.user_metadata.periodo)
-      } else {
-        setUserPeriodo(null)
+      const novoPeriodo = s?.user?.user_metadata?.periodo ?? null
+      setUserPeriodo(novoPeriodo)
+      // USER_UPDATED: se o período mudou no perfil, atualizar aba ativa
+      if (event === 'USER_UPDATED' && novoPeriodo) {
+        setPeriodoAtivo(novoPeriodo)
+        carregarMaterias(novoPeriodo)
       }
     })
     return () => subscription.unsubscribe()
+  // carregarMaterias é estável (useCallback com []), seguro capturar
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Auto-activate user's period
@@ -111,12 +113,9 @@ export default function HomePage() {
     setLoadingMaterias(true)
     setMaterias([])
     const periodoNum = parseInt(periodo)
-    const isInternato = !isNaN(periodoNum) && periodoNum >= 9
-    const isIntegradora = periodo === 'integradora'
 
     let query = supabase.from('provas').select('materia')
-    if (isIntegradora) query = query.eq('periodo', 0)
-    else if (isInternato || isNaN(periodoNum)) query = query.gte('periodo', 9)
+    if (periodo === 'internato') query = query.gte('periodo', 9)
     else query = query.eq('periodo', periodoNum)
 
     const { data, error } = await query
@@ -165,10 +164,9 @@ export default function HomePage() {
 
     const { nome, periodo } = modalMateriaAtiva
     const periodoNum = parseInt(periodo)
-    const isIntegradora = periodo === 'integradora'
 
     let query = supabase.from('provas').select('*').eq('materia', nome).order('ano')
-    if (isIntegradora) query = query.eq('periodo', 0)
+    if (periodo === 'internato') query = query.gte('periodo', 9)
     else if (!isNaN(periodoNum)) query = query.eq('periodo', periodoNum)
 
     const { data, error } = await query
@@ -420,7 +418,6 @@ export default function HomePage() {
                   key={p.value}
                   className={cls}
                   data-periodo={p.value}
-                  title={p.value === 'integradora' ? 'Prova que une SOI, IESC e HAM' : undefined}
                   onClick={() => handlePillClick(p.value)}
                 >
                   {p.label}
@@ -432,18 +429,6 @@ export default function HomePage() {
           <div className="periods__content" id="materias-grid">
             {loadingMaterias && (
               <div className="loading-text">Carregando matérias...</div>
-            )}
-            {!loadingMaterias && periodoAtivo === 'integradora' && materias.length > 0 && (
-              <div className="integradora-banner">
-                <span className="integradora-banner__icon">🔗</span>
-                <div>
-                  <strong>Prova Integradora</strong>
-                  <span>Une as disciplinas de SOI, IESC e HAM</span>
-                </div>
-                <div className="integradora-banner__tags">
-                  <span>SOI</span><span>IESC</span><span>HAM</span>
-                </div>
-              </div>
             )}
             {!loadingMaterias && periodoAtivo && materias.length === 0 && (
               <div className="loading-text">Nenhuma matéria disponível para este período.</div>
@@ -500,7 +485,7 @@ export default function HomePage() {
             </div>
             <div className="footer__col">
               <span className="footer__col-title">Plataforma</span>
-              <a onClick={() => setModalSobreOpen(true)}>Sobre</a>
+              <button type="button" className="footer__link-btn" onClick={() => setModalSobreOpen(true)}>Sobre</button>
               <a href="mailto:filipenqs@hotmail.com">Contato</a>
             </div>
           </div>

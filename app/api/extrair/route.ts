@@ -110,7 +110,27 @@ Regras:
 
     const texto = message.content[0].type === 'text' ? message.content[0].text.trim() : ''
     const jsonLimpo = texto.replace(/```json|```/g, '').trim()
-    const questoes = JSON.parse(jsonLimpo)
+
+    // Limite de tamanho do retorno para evitar payloads abusivos
+    if (jsonLimpo.length > 2_000_000) {
+      console.error('Resposta do Claude excedeu limite de tamanho.')
+      return NextResponse.json({ error: 'Resposta muito grande.' }, { status: 502 })
+    }
+
+    let questoes: unknown
+    try {
+      questoes = JSON.parse(jsonLimpo)
+    } catch {
+      return NextResponse.json({ error: 'Resposta da IA inválida.' }, { status: 502 })
+    }
+
+    // Valida estrutura básica: array não-vazio, tamanho razoável
+    if (!Array.isArray(questoes)) {
+      return NextResponse.json({ error: 'Resposta da IA não é um array.' }, { status: 502 })
+    }
+    if (questoes.length === 0 || questoes.length > 500) {
+      return NextResponse.json({ error: 'Quantidade de questões inválida (1-500).' }, { status: 502 })
+    }
 
     return NextResponse.json({ questoes })
   } catch (error) {

@@ -61,8 +61,15 @@ export default function PerfilPage() {
   const [periodoMsgColor, setPeriodoMsgColor] = useState('#4ade80')
   const [salvandoPeriodo, setSalvandoPeriodo] = useState(false)
 
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mountedRef.current) return
       if (!session) { router.replace('/login'); return }
 
       const user = session.user
@@ -96,6 +103,7 @@ export default function PerfilPage() {
       .eq('finalizada', true)
       .order('created_at', { ascending: false })
 
+    if (!mountedRef.current) return
     setLoadingData(false)
 
     if (!attempts || !attempts.length) {

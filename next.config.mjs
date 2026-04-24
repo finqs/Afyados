@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
+const isDev = process.env.NODE_ENV !== 'production'
+// unsafe-eval só em dev (Next.js dev precisa); produção fica sem
+const scriptSrc = isDev
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'"
+
 const nextConfig = {
   async headers() {
     return [
@@ -9,9 +15,9 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed by Next.js dev
+              scriptSrc,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src https://fonts.gstatic.com",
+              "font-src 'self' https://fonts.gstatic.com",
               "connect-src 'self' https://*.supabase.co https://api.anthropic.com",
               "img-src 'self' data: blob:",
               "frame-ancestors 'none'",
