@@ -429,7 +429,7 @@ export default function HomePage() {
                 <li className="hero__card-item">
                   <span className="hero__card-icon">🤖</span>
                   <div>
-                    <strong>Diagnóstico por IA</strong>
+                    <strong>Sistema de revisão inteligente</strong>
                     <p>Identifica seus pontos fracos</p>
                   </div>
                   <span className="hero__card-check">✓</span>
@@ -480,13 +480,13 @@ export default function HomePage() {
             </div>
             <div className="content-card">
               <div className="content-card__icon">🤖</div>
-              <h3 className="content-card__title">Análise por IA</h3>
+              <h3 className="content-card__title">Sistema de revisão inteligente</h3>
               <p className="content-card__desc">
-                IA que analisa seu desempenho e identifica pontos fracos,
-                sugerindo o que estudar a seguir.
+                Revisão espaçada com FSRS: o algoritmo agenda o que revisar
+                no momento certo para fixar o conteúdo a longo prazo.
               </p>
               <div className="content-card__tags">
-                <span>Diagnóstico</span><span>Recomendações</span>
+                <span>Revisão espaçada</span><span>FSRS</span>
               </div>
               <span className="content-card__link">Em breve →</span>
             </div>
@@ -791,7 +791,7 @@ export default function HomePage() {
                 <button className="modal-btn modal-btn-disabled">
                   <span className="modal-btn-icon">🤖</span>
                   <div>
-                    <div className="modal-btn-title">Análise por IA</div>
+                    <div className="modal-btn-title">Sistema de revisão inteligente</div>
                     <div className="modal-btn-desc">Em breve</div>
                   </div>
                 </button>
