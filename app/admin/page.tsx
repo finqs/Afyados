@@ -60,7 +60,7 @@ export default function AdminPage() {
   const [ready, setReady] = useState(false)
 
   // Aba ativa
-  const [aba, setAba] = useState<'provas' | 'simulados'>('provas')
+  const [aba, setAba] = useState<'provas' | 'simulados' | 'apgs'>('provas')
 
   // ── Campos de PROVA ──
   const [materia, setMateria] = useState('')
@@ -73,6 +73,16 @@ export default function AdminPage() {
   const [simArea, setSimArea] = useState('')
   const [simSubarea, setSimSubarea] = useState('')
   const [simDificuldade, setSimDificuldade] = useState('medio')
+
+  // ── APG upload ──
+  const [apgMateria, setApgMateria] = useState('SOI')
+  const [apgSemestre, setApgSemestre] = useState('2')
+  const [apgNumero, setApgNumero] = useState('')
+  const [apgTitulo, setApgTitulo] = useState('')
+  const [apgPdfFile, setApgPdfFile] = useState<File | null>(null)
+  const [uploadandoApg, setUploadandoApg] = useState(false)
+  const [apgStatus, setApgStatus] = useState('')
+  const [apgStatusType, setApgStatusType] = useState<'info' | 'sucesso' | 'erro'>('info')
 
   // ── Extração compartilhada ──
   const [pdfFile, setPdfFile] = useState<File | null>(null)
@@ -102,12 +112,13 @@ export default function AdminPage() {
   }
 
   // Trocar de aba limpa preview e status
-  const trocarAba = (nova: 'provas' | 'simulados') => {
+  const trocarAba = (nova: 'provas' | 'simulados' | 'apgs') => {
     setAba(nova)
     setQuestoes([])
     setStatus('')
     setPdfFile(null)
     setJsonTexto('')
+    setApgStatus('')
   }
 
   const setStatusMsg = (msg: string, type: 'info' | 'sucesso' | 'erro' = 'info') => {
@@ -254,6 +265,50 @@ export default function AdminPage() {
 
   const handleSalvar = () => aba === 'provas' ? handleSalvarProva() : handleSalvarSimulado()
 
+  // ── Upload de APG ──
+  const handleUploadApg = async () => {
+    if (!apgMateria.trim()) { setApgStatus('Preencha a Matéria.'); setApgStatusType('erro'); return }
+    if (!apgNumero || isNaN(Number(apgNumero))) { setApgStatus('Preencha o Número do APG.'); setApgStatusType('erro'); return }
+    if (!apgTitulo.trim()) { setApgStatus('Preencha o Título.'); setApgStatusType('erro'); return }
+    if (!apgPdfFile) { setApgStatus('Selecione o arquivo PDF.'); setApgStatusType('erro'); return }
+    if (apgPdfFile.size > 20 * 1024 * 1024) { setApgStatus('PDF muito grande (máx 20 MB).'); setApgStatusType('erro'); return }
+
+    setUploadandoApg(true)
+    setApgStatus('⏳ Enviando PDF...')
+    setApgStatusType('info')
+
+    try {
+      const freshToken = await getFreshToken()
+      if (!freshToken) { setApgStatus('Sessão expirada. Faça login novamente.'); setApgStatusType('erro'); return }
+
+      const pdfBase64 = await fileToBase64(apgPdfFile)
+      const res = await fetch('/api/upload-apg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${freshToken}` },
+        body: JSON.stringify({
+          materia:   apgMateria.trim(),
+          semestre:  Number(apgSemestre),
+          numero:    Number(apgNumero),
+          titulo:    apgTitulo.trim(),
+          pdfBase64,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao publicar APG.')
+
+      setApgStatus(`✅ APG ${apgNumero} publicado com sucesso!`)
+      setApgStatusType('sucesso')
+      setApgNumero('')
+      setApgTitulo('')
+      setApgPdfFile(null)
+    } catch (err) {
+      setApgStatus(`❌ ${(err as Error).message}`)
+      setApgStatusType('erro')
+    } finally {
+      setUploadandoApg(false)
+    }
+  }
+
   const statusColor = statusType === 'sucesso' ? '#4ade80' : statusType === 'erro' ? '#f87171' : 'var(--blue-neon)'
 
   if (!ready) return null
@@ -284,6 +339,12 @@ export default function AdminPage() {
             onClick={() => trocarAba('simulados')}
           >
             📝 Simulados
+          </button>
+          <button
+            className={`admin-tab${aba === 'apgs' ? ' active' : ''}`}
+            onClick={() => trocarAba('apgs')}
+          >
+            📚 APGs
           </button>
         </div>
 
@@ -391,6 +452,77 @@ export default function AdminPage() {
               </div>
               {renderExtracao()}
               <p className="admin-status" style={{ color: statusColor }}>{status}</p>
+            </div>
+          </div>
+        )}
+
+        {/* ─────────── ABA APGs ─────────── */}
+        {aba === 'apgs' && (
+          <div className="admin-card">
+            <div className="sobre-label">PUBLICAR APG</div>
+            <div className="admin-form">
+              <div className="admin-row admin-row--2col">
+                <div className="input-group">
+                  <label className="input-label">Matéria</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Ex: SOI, HAM..."
+                    value={apgMateria}
+                    onChange={e => setApgMateria(e.target.value.toUpperCase())}
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Semestre / Módulo</label>
+                  <select className="input-field" value={apgSemestre} onChange={e => setApgSemestre(e.target.value)}>
+                    {[1,2,3,4,5,6,7,8].map(n => (
+                      <option key={n} value={n}>{n}º</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="admin-row admin-row--2col">
+                <div className="input-group">
+                  <label className="input-label">Número do APG</label>
+                  <input
+                    type="number"
+                    className="input-field"
+                    placeholder="Ex: 6"
+                    min={1}
+                    value={apgNumero}
+                    onChange={e => setApgNumero(e.target.value)}
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Título</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Ex: Penso, logo caminho"
+                    value={apgTitulo}
+                    onChange={e => setApgTitulo(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="input-group">
+                <label className="input-label">Arquivo PDF</label>
+                <input
+                  type="file"
+                  className="input-field"
+                  accept=".pdf"
+                  onChange={e => setApgPdfFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+              <button className="btn-primary" onClick={handleUploadApg} disabled={uploadandoApg}>
+                {uploadandoApg ? '⏳ Publicando...' : '📤 Publicar APG'}
+              </button>
+              {apgStatus && (
+                <p className="admin-status" style={{
+                  color: apgStatusType === 'sucesso' ? '#4ade80' : apgStatusType === 'erro' ? '#f87171' : 'var(--blue-neon)'
+                }}>
+                  {apgStatus}
+                </p>
+              )}
             </div>
           </div>
         )}

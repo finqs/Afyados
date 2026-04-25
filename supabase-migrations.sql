@@ -119,3 +119,26 @@ CREATE POLICY "ur_update_own" ON user_reviews
 
 CREATE POLICY "ur_delete_own" ON user_reviews
   FOR DELETE USING (auth.uid() = user_id);
+
+
+-- ─────────────────────────────────────────────
+-- APGs: Aprendizado Baseado em Problemas
+-- ─────────────────────────────────────────────
+-- ANTES de executar: crie o bucket no Supabase Dashboard:
+--   Storage > New bucket > Name: "apgs" > Public: ON
+CREATE TABLE IF NOT EXISTS apgs (
+  id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  materia    text        NOT NULL,            -- Ex: 'SOI'
+  semestre   int         NOT NULL DEFAULT 1,  -- Ex: 2  →  SOI 2
+  numero     int         NOT NULL,            -- Ex: 6
+  titulo     text        NOT NULL,            -- Ex: 'Penso, logo caminho'
+  url_pdf    text        NOT NULL,            -- URL pública do PDF no Storage
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_apg UNIQUE (materia, semestre, numero)
+);
+
+CREATE INDEX IF NOT EXISTS idx_apgs_materia ON apgs (materia, semestre, numero);
+
+-- RLS: leitura pública, escrita só via service role (rota /api/upload-apg)
+ALTER TABLE apgs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "apgs_select" ON apgs FOR SELECT USING (true);

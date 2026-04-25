@@ -10,6 +10,14 @@ interface MateriaInfo {
   periodo: string
 }
 
+interface ApgItem {
+  id: string
+  numero: number
+  titulo: string
+  semestre: number
+  url_pdf: string
+}
+
 const PERIODOS = [
   { label: '1º Período', value: '1' },
   { label: '2º Período', value: '2' },
@@ -45,6 +53,11 @@ export default function HomePage() {
   const [provasList, setProvasList] = useState<Prova[]>([])
   const [loadingProvas, setLoadingProvas] = useState(false)
   const [showProvasList, setShowProvasList] = useState(false)
+
+  // APGs list
+  const [showApgsList, setShowApgsList] = useState(false)
+  const [apgsList, setApgsList] = useState<ApgItem[]>([])
+  const [loadingApgs, setLoadingApgs] = useState(false)
 
   // Simulado config
   const [showSimuladoConfig, setShowSimuladoConfig] = useState(false)
@@ -170,11 +183,26 @@ export default function HomePage() {
     setModalOpen(true)
   }
 
+  const abrirApgs = async () => {
+    setShowApgsList(true)
+    setLoadingApgs(true)
+    const baseMat = modalSubject.trim().toUpperCase().split(/\s+/)[0] // 'SOI' de 'SOI 2'
+    const { data } = await supabase
+      .from('apgs')
+      .select('id, numero, titulo, semestre, url_pdf')
+      .eq('materia', baseMat)
+      .order('semestre', { ascending: true })
+      .order('numero', { ascending: true })
+    setApgsList((data ?? []) as ApgItem[])
+    setLoadingApgs(false)
+  }
+
   const fecharModal = () => {
     setModalOpen(false)
     setModalMateriaAtiva(null)
     setShowProvasList(false)
     setShowSimuladoConfig(false)
+    setShowApgsList(false)
     setProvasList([])
     setInfoMsg('')
     setSimAreas([])
@@ -633,7 +661,34 @@ export default function HomePage() {
           <button className="modal-close" aria-label="Fechar" onClick={fecharModal}>×</button>
           <div className="modal-title-bar">PAINEL DE CONTROLE</div>
           <div className="modal-subject">{modalSubject}</div>
-          {showSimuladoConfig ? (
+          {showApgsList ? (
+            /* ── APGs LIST ── */
+            <div className="apg-list-view">
+              <button className="sim-back" onClick={() => setShowApgsList(false)}>← Voltar</button>
+              <div className="sim-hero-title">APGs · {modalSubject}</div>
+              {loadingApgs ? (
+                <div className="sim-loading-inline">Carregando...</div>
+              ) : apgsList.length === 0 ? (
+                <div className="sim-loading-inline">Nenhum APG disponível ainda.</div>
+              ) : (
+                <div className="apg-list">
+                  {apgsList.map(apg => (
+                    <a
+                      key={apg.id}
+                      href={apg.url_pdf}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="apg-item"
+                    >
+                      <div className="apg-num">APG {String(apg.numero).padStart(2, '0')} · Sem {apg.semestre}</div>
+                      <div className="apg-titulo">{apg.titulo}</div>
+                      <span className="apg-link">Ver PDF →</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : showSimuladoConfig ? (
             /* ── SIMULADO CONFIG ── */
             <div className="sim-config">
               <button className="sim-back" onClick={() => setShowSimuladoConfig(false)}>← Voltar</button>
@@ -752,15 +807,23 @@ export default function HomePage() {
                   <div className="modal-btn-desc">Personalizado por área</div>
                 </div>
               </button>
-              <button className="modal-btn modal-btn-disabled">
-                <span className="modal-btn-icon">📊</span>
-                <div>
-                  <div className="modal-btn-title">
-                    {modalSubject.toUpperCase().includes('SOI') ? 'APGs' : 'Desempenho'}
+              {modalSubject.toUpperCase().includes('SOI') ? (
+                <button className="modal-btn modal-btn-secondary" onClick={abrirApgs}>
+                  <span className="modal-btn-icon">📚</span>
+                  <div>
+                    <div className="modal-btn-title">APGs</div>
+                    <div className="modal-btn-desc">Material de estudo</div>
                   </div>
-                  <div className="modal-btn-desc">Em breve</div>
-                </div>
-              </button>
+                </button>
+              ) : (
+                <button className="modal-btn modal-btn-disabled">
+                  <span className="modal-btn-icon">📊</span>
+                  <div>
+                    <div className="modal-btn-title">Desempenho</div>
+                    <div className="modal-btn-desc">Em breve</div>
+                  </div>
+                </button>
+              )}
               {modalSubject.toUpperCase().includes('SOI') ? (
                 <button className="modal-btn modal-btn-disabled">
                   <span className="modal-btn-icon">🏥</span>
