@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { SimuladoQuestao } from '@/types'
+import { submitReview, type ReviewInput } from '@/app/actions/review'
 
 const NOTA_ABERTA_ACERTO = 75
 const SENTINEL_ABERTA_SEM_NOTA = '__aberta_pendente__'
@@ -13,13 +14,14 @@ function SimuladoContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const materia    = searchParams.get('materia') || ''
-  const area       = searchParams.get('area') || ''
-  const subareas   = searchParams.getAll('subarea')       // múltiplos ?subarea=X&subarea=Y
-  const dificuldade = searchParams.get('dificuldade') || 'all'
-  const quantidade  = Math.min(Math.max(parseInt(searchParams.get('quantidade') || '20'), 1), 100)
+  const materia      = searchParams.get('materia') || ''
+  const areas        = searchParams.getAll('area')         // múltiplos ?area=X&area=Y
+  const subareas     = searchParams.getAll('subarea')      // múltiplos ?subarea=X&subarea=Y
+  const dificuldade  = searchParams.get('dificuldade') || 'all'
+  const quantFechadas = Math.min(Math.max(parseInt(searchParams.get('quantFechadas') || '8'), 0), 200)
+  const quantAbertas  = Math.min(Math.max(parseInt(searchParams.get('quantAbertas')  || '0'), 0), 100)
 
-  const tituloHeader = area ? `${materia} · ${area}` : materia
+  const tituloHeader = areas.length === 1 ? `${materia} · ${areas[0]}` : materia
 
   // ── Questões e navegação ──
   const [questoes, setQuestoes] = useState<SimuladoQuestao[]>([])
@@ -57,6 +59,13 @@ function SimuladoContent() {
   const mountedRef  = useRef(true)
   const finalizarRef = useRef<() => Promise<void>>(async () => {})
 
+  // ── FSRS: auto-avaliação após o simulado ──
+  // Só aparece quando há pelo menos 1 área selecionada
+  const fsrsAtivo = areas.length >= 1
+  const [fsrsEnviando, setFsrsEnviando] = useState(false)
+  const [fsrsDone, setFsrsDone]         = useState(false)
+  const [fsrsDays, setFsrsDays]         = useState<number | null>(null)
+
   useEffect(() => {
     mountedRef.current = true
     return () => {
@@ -68,10 +77,11 @@ function SimuladoContent() {
   // ── Carregar questões ──
   const carregarQuestoes = useCallback(async () => {
     if (!materia) { setErroCarregar('Parâmetros inválidos.'); setLoading(false); return }
+    if (quantFechadas + quantAbertas === 0) { setErroCarregar('Quantidade de questões inválida.'); setLoading(false); return }
     setLoading(true)
 
     let query = supabase.from('simulados_questoes').select('*').eq('materia', materia)
-    if (area) query = query.eq('area', area)
+    if (areas.length > 0)    query = query.in('area', areas)
     if (subareas.length > 0) query = query.in('subarea', subareas)
     if (dificuldade !== 'all') query = query.eq('dificuldade', dificuldade)
 
@@ -85,12 +95,16 @@ function SimuladoContent() {
       return
     }
 
-    // Embaralhar e limitar
-    const shuffled = [...data].sort(() => Math.random() - 0.5)
-    setQuestoes(shuffled.slice(0, quantidade) as SimuladoQuestao[])
+    // Separar por tipo, embaralhar cada pool e combinar
+    const pool = [...data].sort(() => Math.random() - 0.5)
+    const fechadas = pool.filter(q => q.tipo !== 'aberta').slice(0, quantFechadas)
+    const abertas  = pool.filter(q => q.tipo === 'aberta').slice(0, quantAbertas)
+    // Misturar a seleção final
+    const combined = [...fechadas, ...abertas].sort(() => Math.random() - 0.5)
+    setQuestoes(combined as SimuladoQuestao[])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [materia, area, dificuldade, quantidade, subareas.join(',')])
+  }, [materia, dificuldade, quantFechadas, quantAbertas, areas.join(','), subareas.join(',')])
 
   useEffect(() => { carregarQuestoes() }, [carregarQuestoes])
 
@@ -188,6 +202,22 @@ function SimuladoContent() {
   const confirmarSaida = () => {
     if (provaIniciada && Object.keys(respostas).length > 0) setModalSairOpen(true)
     else router.push('/')
+  }
+
+  const handleFsrsRate = async (rating: ReviewInput) => {
+    if (fsrsEnviando || fsrsDone) return
+    setFsrsEnviando(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { setFsrsEnviando(false); return }
+      const result = await submitReview(session.access_token, materia, areas[0], rating)
+      if (result.ok) {
+        setFsrsDays(result.daysUntil ?? null)
+        setFsrsDone(true)
+      }
+    } finally {
+      setFsrsEnviando(false)
+    }
   }
 
   const percentual = questoes.length > 0 ? ((questaoAtual + 1) / questoes.length) * 100 : 0
@@ -360,9 +390,14 @@ function SimuladoContent() {
         <div className="modal">
           <div className="modal-title-bar">SIMULADO PERSONALIZADO</div>
           <div className="modal-subject">{tituloHeader}</div>
-          {subareas.length > 0 && (
+          {areas.length > 1 && (
             <div className="sim-tags-preview">
-              {subareas.map(s => <span key={s} className="sim-tag">{s}</span>)}
+              {areas.map(a => <span key={a} className="sim-tag">{a}</span>)}
+            </div>
+          )}
+          {subareas.length > 0 && (
+            <div className="sim-tags-preview" style={{ marginTop: areas.length > 1 ? '4px' : 0 }}>
+              {subareas.map(s => <span key={s} className="sim-tag" style={{ opacity: 0.7 }}>{s}</span>)}
             </div>
           )}
           <div className="config-opcoes">
@@ -437,7 +472,51 @@ function SimuladoContent() {
           <div className="resultado-grid">
             {resultadoItems.map(item => <div key={item.num} className={item.classe}>{item.num}</div>)}
           </div>
-          <button className="btn btn--primary" style={{ marginTop: '24px', width: '100%', justifyContent: 'center' }} onClick={() => router.push('/')}>
+
+          {/* ── FSRS: auto-avaliação do tema ── */}
+          {fsrsAtivo && (
+            <div className="fsrs-rating-box">
+              {fsrsDone ? (
+                <div className="fsrs-rating-done">
+                  <span className="fsrs-rating-done-icon">✅</span>
+                  <div>
+                    <div className="fsrs-rating-done-title">Revisão agendada!</div>
+                    <div className="fsrs-rating-done-sub">
+                      {fsrsDays === 0
+                        ? 'Próxima revisão: amanhã'
+                        : `Próxima revisão: em ${fsrsDays} dia${fsrsDays === 1 ? '' : 's'}`}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="fsrs-rating-label">Como você se saiu neste tema?</div>
+                  <div className="fsrs-rating-btns">
+                    {([
+                      { v: 0 as ReviewInput, l: 'Errei',   cls: 'fsrs-btn--again' },
+                      { v: 1 as ReviewInput, l: 'Difícil', cls: 'fsrs-btn--hard'  },
+                      { v: 2 as ReviewInput, l: 'Bom',     cls: 'fsrs-btn--good'  },
+                      { v: 3 as ReviewInput, l: 'Fácil',   cls: 'fsrs-btn--easy'  },
+                    ] as const).map(({ v, l, cls }) => (
+                      <button
+                        key={v}
+                        className={`fsrs-btn ${cls}`}
+                        onClick={() => handleFsrsRate(v)}
+                        disabled={fsrsEnviando}
+                      >{l}</button>
+                    ))}
+                  </div>
+                  {fsrsEnviando && (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)', textAlign: 'center', marginTop: '6px' }}>
+                      Salvando...
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          <button className="btn btn--primary" style={{ marginTop: '20px', width: '100%', justifyContent: 'center' }} onClick={() => router.push('/')}>
             ← Voltar ao início
           </button>
         </div>

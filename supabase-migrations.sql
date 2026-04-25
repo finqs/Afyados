@@ -75,3 +75,47 @@ REVOKE EXECUTE ON FUNCTION insert_prova_com_questoes FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION insert_prova_com_questoes FROM authenticated;
 REVOKE EXECUTE ON FUNCTION insert_prova_com_questoes FROM anon;
 -- O service_role (usado na rota Next.js) tem EXECUTE por padrão como superusuário
+
+
+-- ─────────────────────────────────────────────
+-- FSRS: Tabela de revisão espaçada por usuário
+-- ─────────────────────────────────────────────
+-- Um "card" por (user_id, materia, area).
+-- Armazena o estado completo do algoritmo FSRS (ts-fsrs).
+CREATE TABLE IF NOT EXISTS user_reviews (
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  materia         text        NOT NULL,           -- Ex: 'SOI'
+  area            text        NOT NULL DEFAULT '', -- Ex: 'Sistema Nervoso'
+  -- Estado FSRS (mapeado de ts-fsrs Card)
+  stability       float8      NOT NULL DEFAULT 0,
+  difficulty      float8      NOT NULL DEFAULT 0,
+  elapsed_days    int         NOT NULL DEFAULT 0,
+  scheduled_days  int         NOT NULL DEFAULT 0,
+  reps            int         NOT NULL DEFAULT 0,  -- número de revisões
+  lapses          int         NOT NULL DEFAULT 0,  -- número de erros
+  state           smallint    NOT NULL DEFAULT 0,  -- 0=New,1=Learning,2=Review,3=Relearning
+  last_review     timestamptz,
+  next_review     timestamptz NOT NULL DEFAULT now(),
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_user_review UNIQUE (user_id, materia, area)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ur_user_due
+  ON user_reviews (user_id, next_review);
+
+-- RLS
+ALTER TABLE user_reviews ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "ur_select_own" ON user_reviews
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "ur_insert_own" ON user_reviews
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "ur_update_own" ON user_reviews
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "ur_delete_own" ON user_reviews
+  FOR DELETE USING (auth.uid() = user_id);
