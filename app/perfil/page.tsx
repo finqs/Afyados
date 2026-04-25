@@ -1,17 +1,8 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-// Partial type matching what the Supabase query actually returns
-type AttemptRow = {
-  id: string
-  score: number
-  total: number
-  finalizada: boolean
-  created_at: string
-  provas: { materia: string; ano: number; semestre: number } | null
-}
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -25,6 +16,16 @@ import { Bar } from 'react-chartjs-2'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
+// Partial type matching what the Supabase query actually returns
+type AttemptRow = {
+  id: string
+  score: number
+  total: number
+  finalizada: boolean
+  created_at: string
+  provas: { materia: string; ano: number; semestre: number } | null
+}
+
 interface GraficoItem {
   materia: string
   ano: number | string
@@ -36,6 +37,23 @@ interface GraficoItem {
 interface MateriaStats {
   score: number
   total: number
+}
+
+interface ReviewDue {
+  id: string
+  materia: string
+  area: string
+  next_review: string
+  reps: number
+  state: number
+}
+
+function labelEstado(state: number, reps: number): string {
+  if (reps === 0) return 'Novo'
+  if (state === 1) return 'Aprendendo'
+  if (state === 2) return 'Revisão'
+  if (state === 3) return 'Reaprendendo'
+  return 'Novo'
 }
 
 export default function PerfilPage() {
@@ -55,6 +73,10 @@ export default function PerfilPage() {
   const [graficoData, setGraficoData] = useState<GraficoItem[]>([])
   const [loadingData, setLoadingData] = useState(true)
 
+  // FSRS — revisões pendentes
+  const [reviewsDue, setReviewsDue] = useState<ReviewDue[]>([])
+  const [loadingReviews, setLoadingReviews] = useState(true)
+
   // Configurações
   const [perfPeriodo, setPerfPeriodo] = useState('')
   const [periodoMsg, setPeriodoMsg] = useState('')
@@ -65,6 +87,20 @@ export default function PerfilPage() {
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }
+  }, [])
+
+  const carregarReviews = useCallback(async (userId: string) => {
+    setLoadingReviews(true)
+    const { data, error } = await supabase
+      .from('user_reviews')
+      .select('id, materia, area, next_review, reps, state')
+      .eq('user_id', userId)
+      .lte('next_review', new Date().toISOString())
+      .order('next_review', { ascending: true })
+    if (!mountedRef.current) return
+    if (error) { console.error('Erro ao carregar revisões:', error.message) }
+    else setReviewsDue((data ?? []) as ReviewDue[])
+    setLoadingReviews(false)
   }, [])
 
   useEffect(() => {
@@ -79,8 +115,9 @@ export default function PerfilPage() {
       setAvatarLetra(nomeUser.charAt(0).toUpperCase())
       setPerfPeriodo(user.user_metadata?.periodo || '')
 
-      await carregarDados(user.id)
+      await Promise.all([carregarDados(user.id), carregarReviews(user.id)])
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   const carregarDados = async (userId: string) => {
@@ -106,7 +143,6 @@ export default function PerfilPage() {
     if (!mountedRef.current) return
     setLoadingData(false)
 
-    // Codex #8: distinguir erro real de resultado vazio
     if (attemptsError) {
       console.error('Erro ao carregar histórico:', attemptsError.message)
       return
@@ -122,8 +158,8 @@ export default function PerfilPage() {
     const typed = attempts as unknown as AttemptRow[]
 
     const totalQuestoes = typed.reduce((acc, a) => acc + a.total, 0)
-    const totalAcertos = typed.reduce((acc, a) => acc + a.score, 0)
-    const percentGeral = totalQuestoes > 0 ? Math.round((totalAcertos / totalQuestoes) * 100) : 0
+    const totalAcertos  = typed.reduce((acc, a) => acc + a.score, 0)
+    const percentGeral  = totalQuestoes > 0 ? Math.round((totalAcertos / totalQuestoes) * 100) : 0
 
     setStatTotal(String(totalQuestoes))
     setStatAcertos(`${percentGeral}%`)
@@ -142,20 +178,18 @@ export default function PerfilPage() {
     setMateriaMap(mMap)
 
     setGraficoData([...typed].reverse().map(p => ({
-      materia: p.provas?.materia || 'Outros',
-      ano: p.provas?.ano || '',
+      materia:  p.provas?.materia  || 'Outros',
+      ano:      p.provas?.ano      || '',
       semestre: p.provas?.semestre || '',
-      acertos: p.score,
-      total: p.total
+      acertos:  p.score,
+      total:    p.total
     })))
   }
 
   const handleSalvarPeriodo = async () => {
     setSalvandoPeriodo(true)
     const novoPeriodo = perfPeriodo || null
-    const { error } = await supabase.auth.updateUser({
-      data: { periodo: novoPeriodo }
-    })
+    const { error } = await supabase.auth.updateUser({ data: { periodo: novoPeriodo } })
     if (error) {
       setPeriodoMsgColor('#f87171')
       setPeriodoMsg('Erro ao salvar. Tente novamente.')
@@ -174,10 +208,21 @@ export default function PerfilPage() {
     router.replace('/')
   }
 
+  const irParaRevisao = (r: ReviewDue) => {
+    const params = new URLSearchParams({
+      materia:       r.materia,
+      area:          r.area,
+      dificuldade:   'all',
+      quantFechadas: '10',
+      quantAbertas:  '2',
+    })
+    router.push(`/simulado?${params.toString()}`)
+  }
+
   // Chart data
-  const labels = graficoData.map(p => `${p.materia} ${p.ano}.${p.semestre}`)
-  const valores = graficoData.map(p => Math.round((p.acertos / p.total) * 100))
-  const cores = valores.map(v => v >= 70 ? '#4ade80' : v >= 50 ? '#38bdf8' : '#f87171')
+  const labels  = graficoData.map(p => `${p.materia} ${p.ano}.${p.semestre}`)
+  const valores  = graficoData.map(p => Math.round((p.acertos / p.total) * 100))
+  const cores    = valores.map(v => v >= 70 ? '#4ade80' : v >= 50 ? '#38bdf8' : '#f87171')
 
   const chartData = {
     labels,
@@ -248,6 +293,50 @@ export default function PerfilPage() {
             <span className="stat-valor">{statMaterias}</span>
             <div className="stat-label">Matérias estudadas</div>
           </div>
+        </div>
+
+        {/* ── REVISÃO DE HOJE (FSRS) ── */}
+        <div className="perfil-card fsrs-card">
+          <div className="perfil-card-label">
+            <span>📅 Revisão de hoje</span>
+            {reviewsDue.length > 0 && (
+              <span className="fsrs-badge">{reviewsDue.length}</span>
+            )}
+          </div>
+
+          {loadingReviews ? (
+            <div className="loading-text">Carregando...</div>
+          ) : reviewsDue.length === 0 ? (
+            <div className="fsrs-empty">
+              <span className="fsrs-empty-icon">✅</span>
+              <div>
+                <div className="fsrs-empty-title">Nada para revisar hoje!</div>
+                <div className="fsrs-empty-sub">
+                  Conclua simulados por área e avalie seu desempenho para criar cartões de revisão.
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="fsrs-list">
+              {reviewsDue.map(r => (
+                <div key={r.id} className="fsrs-item">
+                  <div className="fsrs-item-info">
+                    <div className="fsrs-item-area">{r.area || r.materia}</div>
+                    <div className="fsrs-item-meta">
+                      <span className="fsrs-item-materia">{r.materia}</span>
+                      <span className="fsrs-item-estado">{labelEstado(r.state, r.reps)}</span>
+                    </div>
+                  </div>
+                  <button
+                    className="fsrs-revisar-btn"
+                    onClick={() => irParaRevisao(r)}
+                  >
+                    Revisar →
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* GRÁFICO */}

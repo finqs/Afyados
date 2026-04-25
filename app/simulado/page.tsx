@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { SimuladoQuestao } from '@/types'
+import { submitReview, type ReviewInput } from '@/app/actions/review'
 
 const NOTA_ABERTA_ACERTO = 75
 const SENTINEL_ABERTA_SEM_NOTA = '__aberta_pendente__'
@@ -57,6 +58,13 @@ function SimuladoContent() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const mountedRef  = useRef(true)
   const finalizarRef = useRef<() => Promise<void>>(async () => {})
+
+  // ── FSRS: auto-avaliação após o simulado ──
+  // Só aparece quando há pelo menos 1 área selecionada
+  const fsrsAtivo = areas.length >= 1
+  const [fsrsEnviando, setFsrsEnviando] = useState(false)
+  const [fsrsDone, setFsrsDone]         = useState(false)
+  const [fsrsDays, setFsrsDays]         = useState<number | null>(null)
 
   useEffect(() => {
     mountedRef.current = true
@@ -194,6 +202,22 @@ function SimuladoContent() {
   const confirmarSaida = () => {
     if (provaIniciada && Object.keys(respostas).length > 0) setModalSairOpen(true)
     else router.push('/')
+  }
+
+  const handleFsrsRate = async (rating: ReviewInput) => {
+    if (fsrsEnviando || fsrsDone) return
+    setFsrsEnviando(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { setFsrsEnviando(false); return }
+      const result = await submitReview(session.access_token, materia, areas[0], rating)
+      if (result.ok) {
+        setFsrsDays(result.daysUntil ?? null)
+        setFsrsDone(true)
+      }
+    } finally {
+      setFsrsEnviando(false)
+    }
   }
 
   const percentual = questoes.length > 0 ? ((questaoAtual + 1) / questoes.length) * 100 : 0
@@ -448,7 +472,51 @@ function SimuladoContent() {
           <div className="resultado-grid">
             {resultadoItems.map(item => <div key={item.num} className={item.classe}>{item.num}</div>)}
           </div>
-          <button className="btn btn--primary" style={{ marginTop: '24px', width: '100%', justifyContent: 'center' }} onClick={() => router.push('/')}>
+
+          {/* ── FSRS: auto-avaliação do tema ── */}
+          {fsrsAtivo && (
+            <div className="fsrs-rating-box">
+              {fsrsDone ? (
+                <div className="fsrs-rating-done">
+                  <span className="fsrs-rating-done-icon">✅</span>
+                  <div>
+                    <div className="fsrs-rating-done-title">Revisão agendada!</div>
+                    <div className="fsrs-rating-done-sub">
+                      {fsrsDays === 0
+                        ? 'Próxima revisão: amanhã'
+                        : `Próxima revisão: em ${fsrsDays} dia${fsrsDays === 1 ? '' : 's'}`}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="fsrs-rating-label">Como você se saiu neste tema?</div>
+                  <div className="fsrs-rating-btns">
+                    {([
+                      { v: 0 as ReviewInput, l: 'Errei',   cls: 'fsrs-btn--again' },
+                      { v: 1 as ReviewInput, l: 'Difícil', cls: 'fsrs-btn--hard'  },
+                      { v: 2 as ReviewInput, l: 'Bom',     cls: 'fsrs-btn--good'  },
+                      { v: 3 as ReviewInput, l: 'Fácil',   cls: 'fsrs-btn--easy'  },
+                    ] as const).map(({ v, l, cls }) => (
+                      <button
+                        key={v}
+                        className={`fsrs-btn ${cls}`}
+                        onClick={() => handleFsrsRate(v)}
+                        disabled={fsrsEnviando}
+                      >{l}</button>
+                    ))}
+                  </div>
+                  {fsrsEnviando && (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)', textAlign: 'center', marginTop: '6px' }}>
+                      Salvando...
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          <button className="btn btn--primary" style={{ marginTop: '20px', width: '100%', justifyContent: 'center' }} onClick={() => router.push('/')}>
             ← Voltar ao início
           </button>
         </div>

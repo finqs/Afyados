@@ -1182,6 +1182,88 @@ textarea.input-field { resize: vertical; min-height: 120px; line-height: 1.5; }
 }
 .footer__link-btn:hover { color: var(--blue-neon); }
 
+/* ═══════════════════════════════════════════
+   FSRS — Revisão espaçada
+   ═══════════════════════════════════════════ */
+
+/* Perfil: card de revisão de hoje */
+.fsrs-card .perfil-card-label {
+  display: flex; align-items: center; gap: 10px;
+}
+.fsrs-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: white;
+  font-size: 0.75rem; font-weight: 700; padding: 0 4px;
+}
+.fsrs-empty {
+  display: flex; align-items: flex-start; gap: 14px; padding: 12px 0;
+}
+.fsrs-empty-icon { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+.fsrs-empty-title { font-size: 0.95rem; font-weight: 600; color: var(--white); margin-bottom: 4px; }
+.fsrs-empty-sub   { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+
+.fsrs-list { display: flex; flex-direction: column; gap: 10px; }
+.fsrs-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px; border-radius: var(--radius-sm);
+  background: var(--surface2); border: 1px solid var(--border);
+  transition: var(--transition);
+}
+.fsrs-item:hover { border-color: var(--accent-border); }
+.fsrs-item-info   { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fsrs-item-area   { font-size: 0.95rem; font-weight: 600; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fsrs-item-meta   { display: flex; gap: 8px; align-items: center; }
+.fsrs-item-materia { font-size: 0.78rem; color: var(--blue-neon); font-weight: 600; }
+.fsrs-item-estado  { font-size: 0.75rem; color: var(--muted); }
+.fsrs-revisar-btn {
+  flex-shrink: 0;
+  padding: 7px 16px; border-radius: 50px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-dim); color: var(--blue-neon);
+  font-size: 0.82rem; font-weight: 600; font-family: var(--font-body);
+  cursor: pointer; transition: var(--transition); white-space: nowrap;
+}
+.fsrs-revisar-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* Simulado: caixa de avaliação no modal de resultado */
+.fsrs-rating-box {
+  margin-top: 20px; padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+}
+.fsrs-rating-label {
+  font-size: 0.82rem; font-weight: 600; color: var(--muted);
+  text-align: center; margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+.fsrs-rating-btns {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+.fsrs-btn {
+  padding: 8px 4px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 0.82rem; font-weight: 600; font-family: var(--font-body);
+  cursor: pointer; transition: var(--transition);
+}
+.fsrs-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.fsrs-btn--again { background: rgba(248,113,113,0.12); color: #f87171; border-color: rgba(248,113,113,0.3); }
+.fsrs-btn--again:hover:not(:disabled) { background: #f87171; color: white; }
+.fsrs-btn--hard  { background: rgba(251,191, 36,0.12); color: #fbbf24; border-color: rgba(251,191,36,0.3);  }
+.fsrs-btn--hard:hover:not(:disabled)  { background: #fbbf24; color: #111; }
+.fsrs-btn--good  { background: rgba( 56,189,248,0.12); color: var(--blue-neon); border-color: var(--border); }
+.fsrs-btn--good:hover:not(:disabled)  { background: var(--accent); color: white; }
+.fsrs-btn--easy  { background: rgba( 74,222,128,0.12); color: #4ade80; border-color: rgba(74,222,128,0.3);  }
+.fsrs-btn--easy:hover:not(:disabled)  { background: #4ade80; color: #111; }
+
+.fsrs-rating-done {
+  display: flex; align-items: center; gap: 12px;
+}
+.fsrs-rating-done-icon  { font-size: 1.5rem; flex-shrink: 0; }
+.fsrs-rating-done-title { font-size: 0.92rem; font-weight: 600; color: var(--white); }
+.fsrs-rating-done-sub   { font-size: 0.8rem;  color: var(--muted); margin-top: 2px; }
+
 /* ============================================
    PERFIL
    ============================================ */
