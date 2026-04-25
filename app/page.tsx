@@ -692,18 +692,6 @@ export default function HomePage() {
               )}
               <div className="sim-hint">* Deixe vazio para usar questões de todos os assuntos.</div>
 
-              {/* DIFICULDADE */}
-              <div className="sim-section-label" style={{ marginTop: '20px' }}>NÍVEL DE DIFICULDADE</div>
-              <div className="sim-dif-row">
-                {[{v:'all',l:'Aleatório'},{v:'facil',l:'Fácil'},{v:'medio',l:'Médio'},{v:'dificil',l:'Difícil'}].map(d => (
-                  <button
-                    key={d.v}
-                    className={`sim-dif-btn${simDificuldade === d.v ? ' active' : ''}`}
-                    onClick={() => setSimDificuldade(d.v)}
-                  >{d.l}</button>
-                ))}
-              </div>
-
               {/* CONTAGEM */}
               <div className="sim-count-box">
                 <div className="sim-count-label">Questões encontradas com os filtros atuais:</div>
@@ -722,7 +710,7 @@ export default function HomePage() {
                   <div className="sim-qty-ctrl">
                     <button className="sim-qty-btn" onClick={() => setSimQuantFechadas(v => Math.max(0, v - 1))}>◀</button>
                     <span className="sim-qty-val">{simQuantFechadas}</span>
-                    <button className="sim-qty-btn" onClick={() => setSimQuantFechadas(v => Math.min(simCountFechadas ?? 200, v + 1))}>▶</button>
+                    <button className="sim-qty-btn" onClick={() => setSimQuantFechadas(v => Math.min(20, v + 1))}>▶</button>
                   </div>
                 </div>
                 <div className="sim-qty-box">
@@ -730,7 +718,7 @@ export default function HomePage() {
                   <div className="sim-qty-ctrl">
                     <button className="sim-qty-btn" onClick={() => setSimQuantAbertas(v => Math.max(0, v - 1))}>◀</button>
                     <span className="sim-qty-val">{simQuantAbertas}</span>
-                    <button className="sim-qty-btn" onClick={() => setSimQuantAbertas(v => Math.min(simCountAbertas ?? 200, v + 1))}>▶</button>
+                    <button className="sim-qty-btn" onClick={() => setSimQuantAbertas(v => Math.min(10, v + 1))}>▶</button>
                   </div>
                 </div>
               </div>
