@@ -71,6 +71,8 @@ export default function AdminPage() {
 
   // ── Campos de SIMULADO ──
   const [simMateria, setSimMateria] = useState('')
+  const [simArea, setSimArea] = useState('')
+  const [simSubarea, setSimSubarea] = useState('')
   const [simDificuldade, setSimDificuldade] = useState('medio')
 
   // ── Extração compartilhada ──
@@ -123,7 +125,9 @@ export default function AdminPage() {
 
   const getDadosSimulado = () => {
     if (!simMateria.trim()) { setStatusMsg('Preencha a Matéria.', 'erro'); return null }
-    return { materia: simMateria.trim(), dificuldade: simDificuldade }
+    if (!simArea.trim()) { setStatusMsg('Preencha a Grande Área.', 'erro'); return null }
+    if (!simSubarea.trim()) { setStatusMsg('Preencha a Subárea.', 'erro'); return null }
+    return { materia: simMateria.trim(), area: simArea.trim(), subarea: simSubarea.trim(), dificuldade: simDificuldade }
   }
 
   const validarCampos = () =>
@@ -231,6 +235,8 @@ export default function AdminPage() {
     try {
       const questoesParaSalvar = questoes.map(q => ({
         materia: dados.materia,
+        area: dados.area,
+        subarea: dados.subarea,
         dificuldade: dados.dificuldade,
         numero: q.numero,
         tipo: q.tipo ?? 'multipla_escolha',
@@ -247,7 +253,7 @@ export default function AdminPage() {
       const { error } = await supabase.from('simulados_questoes').insert(questoesParaSalvar)
       if (error) throw new Error(error.message)
 
-      setStatusMsg(`✅ ${questoes.length} questões adicionadas ao banco de "${dados.materia}"!`, 'sucesso')
+      setStatusMsg(`✅ ${questoes.length} questões adicionadas → ${dados.materia} / ${dados.area} / ${dados.subarea}`, 'sucesso')
       setQuestoes([])
     } catch (err) {
       setStatusMsg(`❌ ${(err as Error).message}`, 'erro')
@@ -369,6 +375,28 @@ export default function AdminPage() {
                     <option value="medio">Médio</option>
                     <option value="dificil">Difícil</option>
                   </select>
+                </div>
+              </div>
+              <div className="admin-row admin-row--2col">
+                <div className="input-group">
+                  <label className="input-label">Grande Área</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Ex: Sistema Cardiovascular"
+                    value={simArea}
+                    onChange={e => setSimArea(e.target.value)}
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Subárea</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Ex: Irrigação Cardíaca"
+                    value={simSubarea}
+                    onChange={e => setSimSubarea(e.target.value)}
+                  />
                 </div>
               </div>
               {renderExtracao()}
