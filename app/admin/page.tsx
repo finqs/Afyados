@@ -58,7 +58,6 @@ function normalizeQuestoes(parsed: unknown): QuestaoExtraida[] {
 export default function AdminPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
-  const [token, setToken] = useState('')
 
   // Aba ativa
   const [aba, setAba] = useState<'provas' | 'simulados'>('provas')
@@ -92,10 +91,15 @@ export default function AdminPage() {
       if (session.user.app_metadata?.role !== 'admin') {
         router.replace('/'); return
       }
-      setToken(session.access_token)
       setReady(true)
     })
   }, [router])
+
+  // Codex #5: sempre obter token fresco antes de cada requisição ao servidor
+  const getFreshToken = async (): Promise<string | null> => {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token ?? null
+  }
 
   // Trocar de aba limpa preview e status
   const trocarAba = (nova: 'provas' | 'simulados') => {
@@ -142,10 +146,16 @@ export default function AdminPage() {
     setExtraindo(true)
     setStatusMsg('🤖 Enviando PDF para o Claude...', 'info')
     try {
+      // Codex #5: token fresco a cada chamada (evita 401 após refresh de sessão)
+      const freshToken = await getFreshToken()
+      if (!freshToken) {
+        setStatusMsg('Sessão expirada. Faça login novamente.', 'erro')
+        return
+      }
       const base64 = await fileToBase64(pdfFile)
       const res = await fetch('/api/extrair', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${freshToken}` },
         body: JSON.stringify({ pdfBase64: base64 })
       })
       const data = await res.json()
@@ -174,7 +184,7 @@ export default function AdminPage() {
     }
   }
 
-  // ── Salvar PROVA ──
+  // ── Salvar PROVA (Codex #1 + #2: via rota server-side, insert atômico) ──
   const handleSalvarProva = async () => {
     const dados = getDadosProva()
     if (!dados) return
@@ -182,39 +192,22 @@ export default function AdminPage() {
 
     setSalvando(true)
     try {
-      const anoSalvo = parseInt(dados.ano)
-      const semestreSalvo = parseInt(dados.semestre)
-      if (isNaN(dados.periodoNum) || isNaN(anoSalvo) || isNaN(semestreSalvo)) {
-        throw new Error('Período, ano ou semestre inválidos.')
-      }
+      const freshToken = await getFreshToken()
+      if (!freshToken) { setStatusMsg('Sessão expirada. Faça login novamente.', 'erro'); return }
 
-      const { data: prova, error: provaError } = await supabase
-        .from('provas')
-        .insert({ materia: dados.materia, periodo: dados.periodoNum, ano: anoSalvo, semestre: semestreSalvo })
-        .select()
-        .single()
-
-      if (provaError || !prova) throw new Error(provaError?.message || 'Erro ao criar prova.')
-
-      const questoesParaSalvar = questoes.map(q => ({
-        prova_id: prova.id,
-        numero: q.numero,
-        tipo: q.tipo ?? 'multipla_escolha',
-        enunciado: q.enunciado,
-        alternativa_a: q.alternativa_a,
-        alternativa_b: q.alternativa_b,
-        alternativa_c: q.alternativa_c,
-        alternativa_d: q.alternativa_d,
-        alternativa_e: q.alternativa_e ?? '',
-        gabarito: q.gabarito,
-        comentario: q.comentario ?? ''
-      }))
-
-      const { error: questoesError } = await supabase.from('questoes').insert(questoesParaSalvar)
-      if (questoesError) {
-        await supabase.from('provas').delete().eq('id', prova.id)
-        throw new Error('Erro ao salvar questões: ' + questoesError.message)
-      }
+      const res = await fetch('/api/salvar-prova', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${freshToken}` },
+        body: JSON.stringify({
+          materia:    dados.materia,
+          periodoNum: dados.periodoNum,
+          ano:        parseInt(dados.ano),
+          semestre:   parseInt(dados.semestre),
+          questoes
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao salvar prova.')
 
       setStatusMsg('✅ Prova e questões salvas com sucesso!', 'sucesso')
       setQuestoes([])
@@ -225,7 +218,7 @@ export default function AdminPage() {
     }
   }
 
-  // ── Salvar SIMULADO ──
+  // ── Salvar SIMULADO (Codex #1: via rota server-side) ──
   const handleSalvarSimulado = async () => {
     const dados = getDadosSimulado()
     if (!dados) return
@@ -233,25 +226,22 @@ export default function AdminPage() {
 
     setSalvando(true)
     try {
-      const questoesParaSalvar = questoes.map(q => ({
-        materia: dados.materia,
-        area: dados.area,
-        subarea: dados.subarea,
-        dificuldade: dados.dificuldade,
-        numero: q.numero,
-        tipo: q.tipo ?? 'multipla_escolha',
-        enunciado: q.enunciado,
-        alternativa_a: q.alternativa_a,
-        alternativa_b: q.alternativa_b,
-        alternativa_c: q.alternativa_c,
-        alternativa_d: q.alternativa_d,
-        alternativa_e: q.alternativa_e ?? '',
-        gabarito: q.gabarito,
-        comentario: q.comentario ?? ''
-      }))
+      const freshToken = await getFreshToken()
+      if (!freshToken) { setStatusMsg('Sessão expirada. Faça login novamente.', 'erro'); return }
 
-      const { error } = await supabase.from('simulados_questoes').insert(questoesParaSalvar)
-      if (error) throw new Error(error.message)
+      const res = await fetch('/api/salvar-simulado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${freshToken}` },
+        body: JSON.stringify({
+          materia:     dados.materia,
+          area:        dados.area,
+          subarea:     dados.subarea,
+          dificuldade: dados.dificuldade,
+          questoes
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao salvar questões.')
 
       setStatusMsg(`✅ ${questoes.length} questões adicionadas → ${dados.materia} / ${dados.area} / ${dados.subarea}`, 'sucesso')
       setQuestoes([])

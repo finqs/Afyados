@@ -24,12 +24,15 @@ export default function LoginPage() {
       return
     }
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
-    if (error) {
-      setErro('E-mail ou senha incorretos.')
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
+      if (error) {
+        setErro('E-mail ou senha incorretos.')
+      } else {
+        router.replace('/')
+      }
+    } finally {
       setLoading(false)
-    } else {
-      router.replace('/')
     }
   }
 

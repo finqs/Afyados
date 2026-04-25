@@ -4,6 +4,27 @@ import { createClient } from '@supabase/supabase-js'
 
 const MAX_PDF_BASE64_LENGTH = 14_000_000 // ~10MB PDF
 
+// ── Rate limiting (in-memory; resets per serverless instance) ──
+// Codex #6: limita abuso de créditos Anthropic por usuário
+const RATE_LIMIT_MAX    = 10               // requisições por janela
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000  // 1 hora em ms
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+
+function checkRateLimit(userId: string): { allowed: boolean; retryAfterSec: number } {
+  const now = Date.now()
+  const entry = rateLimitMap.get(userId)
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
+    return { allowed: true, retryAfterSec: 0 }
+  }
+  if (entry.count >= RATE_LIMIT_MAX) {
+    const retryAfterSec = Math.ceil((entry.resetAt - now) / 1000)
+    return { allowed: false, retryAfterSec }
+  }
+  entry.count++
+  return { allowed: true, retryAfterSec: 0 }
+}
+
 export async function POST(req: NextRequest) {
   // 1. Verificar Bearer token
   const authHeader = req.headers.get('authorization')
@@ -37,6 +58,15 @@ export async function POST(req: NextRequest) {
   // 4. Verificar role admin
   if (user.app_metadata?.role !== 'admin') {
     return NextResponse.json({ error: 'Acesso restrito a administradores.' }, { status: 403 })
+  }
+
+  // 4b. Rate limiting por usuário (Codex #6)
+  const rl = checkRateLimit(user.id)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Muitas requisições. Tente novamente em ${rl.retryAfterSec}s.` },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+    )
   }
 
   // 5. Ler body
