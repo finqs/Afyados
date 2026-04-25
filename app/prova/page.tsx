@@ -161,14 +161,14 @@ function ProvaContent() {
 
   const salvarResposta = async (questaoId: string, resposta: string, acertou: boolean | number) => {
     if (!attemptId) return
-    const { error } = await supabase.from('attempt_answers').insert({
+    // Upsert evita duplicatas se o usuário rever gabarito múltiplas vezes (Codex #3)
+    const { error } = await supabase.from('attempt_answers').upsert({
       attempt_id: attemptId,
       questao_id: questaoId,
       resposta,
       acertou
-    })
+    }, { onConflict: 'attempt_id,questao_id' })
     if (error) {
-      // Log local; sem await nas chamadas, erros silenciosos eram o problema
       console.error('Falha ao salvar resposta:', error.message)
     }
   }

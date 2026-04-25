@@ -85,7 +85,7 @@ export default function PerfilPage() {
 
   const carregarDados = async (userId: string) => {
     setLoadingData(true)
-    const { data: attempts } = await supabase
+    const { data: attempts, error: attemptsError } = await supabase
       .from('exam_attempts')
       .select(`
         id,
@@ -106,6 +106,11 @@ export default function PerfilPage() {
     if (!mountedRef.current) return
     setLoadingData(false)
 
+    // Codex #8: distinguir erro real de resultado vazio
+    if (attemptsError) {
+      console.error('Erro ao carregar histórico:', attemptsError.message)
+      return
+    }
     if (!attempts || !attempts.length) {
       setStatTotal('0')
       setStatAcertos('0%')

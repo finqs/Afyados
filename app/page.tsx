@@ -131,7 +131,12 @@ export default function HomePage() {
 
     const { data, error } = await query
 
-    if (error || !data || !data.length) {
+    if (error) {
+      console.error('Erro ao carregar matérias:', error.message)
+      setLoadingMaterias(false)
+      return
+    }
+    if (!data || !data.length) {
       setLoadingMaterias(false)
       setMaterias([])
       return
@@ -240,7 +245,13 @@ export default function HomePage() {
     const { data, error } = await query
     setLoadingProvas(false)
 
-    if (error || !data || !data.length) {
+    if (error) {
+      console.error('Erro ao carregar provas:', error.message)
+      setInfoMsg('Erro ao carregar provas. Tente novamente.')
+      setShowProvasList(true)
+      return
+    }
+    if (!data || !data.length) {
       setInfoMsg('Nenhuma prova disponível para esta matéria ainda.')
       setShowProvasList(true)
       return
