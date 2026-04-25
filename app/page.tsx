@@ -46,6 +46,17 @@ export default function HomePage() {
   const [loadingProvas, setLoadingProvas] = useState(false)
   const [showProvasList, setShowProvasList] = useState(false)
 
+  // Simulado config (multi-step dentro do modal)
+  const [showSimuladoConfig, setShowSimuladoConfig] = useState(false)
+  const [simAreas, setSimAreas] = useState<string[]>([])
+  const [simAreaSel, setSimAreaSel] = useState<string | null>(null)
+  const [simSubareas, setSimSubareas] = useState<string[]>([])
+  const [simSubareasSel, setSimSubareasSel] = useState<string[]>([])
+  const [simDificuldade, setSimDificuldade] = useState('all')
+  const [simQuantidade, setSimQuantidade] = useState(20)
+  const [loadingSimAreas, setLoadingSimAreas] = useState(false)
+  const [loadingSubareas, setLoadingSubareas] = useState(false)
+
   // Modal Sobre
   const [modalSobreOpen, setModalSobreOpen] = useState(false)
 
@@ -154,8 +165,65 @@ export default function HomePage() {
     setModalOpen(false)
     setModalMateriaAtiva(null)
     setShowProvasList(false)
+    setShowSimuladoConfig(false)
     setProvasList([])
     setInfoMsg('')
+    setSimAreas([])
+    setSimAreaSel(null)
+    setSimSubareas([])
+    setSimSubareasSel([])
+    setSimDificuldade('all')
+    setSimQuantidade(20)
+  }
+
+  // ── Simulado config ──
+  const abrirSimuladoConfig = async () => {
+    if (!modalMateriaAtiva) return
+    setShowSimuladoConfig(true)
+    setLoadingSimAreas(true)
+    const { data } = await supabase
+      .from('simulados_questoes')
+      .select('area')
+      .eq('materia', modalMateriaAtiva.nome)
+      .neq('area', '')
+    const areas = Array.from(new Set(data?.map((d: { area: string }) => d.area).filter(Boolean) ?? [])).sort()
+    setSimAreas(areas)
+    setLoadingSimAreas(false)
+  }
+
+  const selecionarArea = async (area: string) => {
+    if (!modalMateriaAtiva) return
+    setSimAreaSel(area)
+    setSimSubareasSel([])
+    setLoadingSubareas(true)
+    const { data } = await supabase
+      .from('simulados_questoes')
+      .select('subarea')
+      .eq('materia', modalMateriaAtiva.nome)
+      .eq('area', area)
+      .neq('subarea', '')
+    const subs = Array.from(new Set(data?.map((d: { subarea: string }) => d.subarea).filter(Boolean) ?? [])).sort()
+    setSimSubareas(subs)
+    setLoadingSubareas(false)
+  }
+
+  const toggleSubarea = (sub: string) => {
+    setSimSubareasSel(prev =>
+      prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub]
+    )
+  }
+
+  const iniciarSimulado = () => {
+    if (!modalMateriaAtiva || !simAreaSel) return
+    const params = new URLSearchParams({
+      materia: modalMateriaAtiva.nome,
+      area: simAreaSel,
+      dificuldade: simDificuldade,
+      quantidade: String(simQuantidade)
+    })
+    simSubareasSel.forEach(s => params.append('subarea', s))
+    fecharModal()
+    router.push(`/simulado?${params.toString()}`)
   }
 
   const carregarProvas = async () => {
@@ -522,7 +590,96 @@ export default function HomePage() {
           <button className="modal-close" aria-label="Fechar" onClick={fecharModal}>×</button>
           <div className="modal-title-bar">PAINEL DE CONTROLE</div>
           <div className="modal-subject">{modalSubject}</div>
-          {!showProvasList ? (
+          {showSimuladoConfig ? (
+            /* ── SIMULADO CONFIG ── */
+            <div className="sim-config">
+              <button
+                className="sim-back"
+                onClick={() => { setShowSimuladoConfig(false); setSimAreaSel(null); setSimSubareas([]) }}
+              >
+                ← Voltar
+              </button>
+
+              <div className="sim-section-label">GRANDE ÁREA</div>
+              {loadingSimAreas ? (
+                <div className="loading-text" style={{ padding: '12px 0' }}>Carregando...</div>
+              ) : simAreas.length === 0 ? (
+                <div className="loading-text" style={{ padding: '12px 0', fontSize: '0.85rem' }}>
+                  Nenhuma área disponível ainda para {modalSubject}.
+                </div>
+              ) : (
+                <div className="sim-areas-grid">
+                  {simAreas.map(a => (
+                    <button
+                      key={a}
+                      className={`sim-area-btn${simAreaSel === a ? ' active' : ''}`}
+                      onClick={() => selecionarArea(a)}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {simAreaSel && (
+                <>
+                  <div className="sim-section-label" style={{ marginTop: '20px' }}>SUBÁREAS</div>
+                  {loadingSubareas ? (
+                    <div className="loading-text" style={{ padding: '8px 0' }}>Carregando...</div>
+                  ) : simSubareas.length === 0 ? (
+                    <div className="loading-text" style={{ fontSize: '0.85rem' }}>Nenhuma subárea encontrada.</div>
+                  ) : (
+                    <div className="sim-subareas-list">
+                      {simSubareas.map(sub => (
+                        <label key={sub} className="sim-subarea-item">
+                          <input
+                            type="checkbox"
+                            checked={simSubareasSel.includes(sub)}
+                            onChange={() => toggleSubarea(sub)}
+                          />
+                          <span>{sub}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {simSubareasSel.length > 0 && (
+                    <>
+                      <div className="sim-section-label" style={{ marginTop: '20px' }}>DIFICULDADE</div>
+                      <div className="sim-dif-row">
+                        {[{v:'all',l:'Todas'},{v:'facil',l:'Fácil'},{v:'medio',l:'Médio'},{v:'dificil',l:'Difícil'}].map(d => (
+                          <button
+                            key={d.v}
+                            className={`sim-dif-btn${simDificuldade === d.v ? ' active' : ''}`}
+                            onClick={() => setSimDificuldade(d.v)}
+                          >{d.l}</button>
+                        ))}
+                      </div>
+
+                      <div className="sim-section-label" style={{ marginTop: '16px' }}>
+                        QUESTÕES — <span style={{ color: 'var(--white)', fontWeight: 700 }}>{simQuantidade}</span>
+                      </div>
+                      <input
+                        type="range" min={5} max={60} step={5}
+                        value={simQuantidade}
+                        onChange={e => setSimQuantidade(parseInt(e.target.value))}
+                        className="sim-slider"
+                      />
+
+                      <button
+                        className="btn btn--primary"
+                        style={{ marginTop: '20px', width: '100%', justifyContent: 'center' }}
+                        onClick={iniciarSimulado}
+                      >
+                        Iniciar Simulado →
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          ) : !showProvasList ? (
+            /* ── MENU PRINCIPAL ── */
             <div className="modal-actions">
               <button
                 className="modal-btn modal-btn-primary"
@@ -535,11 +692,11 @@ export default function HomePage() {
                   <div className="modal-btn-desc">Acesse as provas anteriores</div>
                 </div>
               </button>
-              <button className="modal-btn modal-btn-secondary">
+              <button className="modal-btn modal-btn-secondary" onClick={abrirSimuladoConfig}>
                 <span className="modal-btn-icon">📝</span>
                 <div>
                   <div className="modal-btn-title">Simulados</div>
-                  <div className="modal-btn-desc">Em breve</div>
+                  <div className="modal-btn-desc">Personalizado por área</div>
                 </div>
               </button>
               <button className="modal-btn modal-btn-disabled">
@@ -549,13 +706,31 @@ export default function HomePage() {
                   <div className="modal-btn-desc">Em breve</div>
                 </div>
               </button>
-              <button className="modal-btn modal-btn-disabled">
-                <span className="modal-btn-icon">🤖</span>
-                <div>
-                  <div className="modal-btn-title">Análise por IA</div>
-                  <div className="modal-btn-desc">Em breve</div>
-                </div>
-              </button>
+              {modalSubject.toUpperCase().includes('SOI') ? (
+                <button className="modal-btn modal-btn-disabled">
+                  <span className="modal-btn-icon">🏥</span>
+                  <div>
+                    <div className="modal-btn-title">Multiestações</div>
+                    <div className="modal-btn-desc">Em breve</div>
+                  </div>
+                </button>
+              ) : modalSubject.toUpperCase().includes('HAM') ? (
+                <button className="modal-btn modal-btn-disabled">
+                  <span className="modal-btn-icon">🩺</span>
+                  <div>
+                    <div className="modal-btn-title">Simulado OSCE</div>
+                    <div className="modal-btn-desc">Em breve</div>
+                  </div>
+                </button>
+              ) : (
+                <button className="modal-btn modal-btn-disabled">
+                  <span className="modal-btn-icon">🤖</span>
+                  <div>
+                    <div className="modal-btn-title">Análise por IA</div>
+                    <div className="modal-btn-desc">Em breve</div>
+                  </div>
+                </button>
+              )}
             </div>
           ) : (
             <div className="modal-actions">

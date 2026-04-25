@@ -43,3 +43,21 @@ export interface AttemptAnswer {
   resposta: string
   acertou: boolean | number
 }
+
+export interface SimuladoQuestao {
+  id: string
+  materia: string
+  area: string
+  subarea: string
+  dificuldade: string
+  numero?: number
+  tipo?: string
+  enunciado: string
+  alternativa_a: string
+  alternativa_b: string
+  alternativa_c: string
+  alternativa_d: string
+  alternativa_e?: string
+  gabarito: string
+  comentario?: string
+}
