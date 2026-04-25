@@ -767,7 +767,9 @@ export default function HomePage() {
               <button className="modal-btn modal-btn-disabled">
                 <span className="modal-btn-icon">📊</span>
                 <div>
-                  <div className="modal-btn-title">Desempenho</div>
+                  <div className="modal-btn-title">
+                    {modalSubject.toUpperCase().includes('SOI') ? 'APGs' : 'Desempenho'}
+                  </div>
                   <div className="modal-btn-desc">Em breve</div>
                 </div>
               </button>
