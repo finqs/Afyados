@@ -46,16 +46,20 @@ export default function HomePage() {
   const [loadingProvas, setLoadingProvas] = useState(false)
   const [showProvasList, setShowProvasList] = useState(false)
 
-  // Simulado config (multi-step dentro do modal)
+  // Simulado config
   const [showSimuladoConfig, setShowSimuladoConfig] = useState(false)
   const [simAreas, setSimAreas] = useState<string[]>([])
-  const [simAreaSel, setSimAreaSel] = useState<string | null>(null)
+  const [simAreasSel, setSimAreasSel] = useState<string[]>([])
   const [simSubareas, setSimSubareas] = useState<string[]>([])
   const [simSubareasSel, setSimSubareasSel] = useState<string[]>([])
+  const [simTagSearch, setSimTagSearch] = useState('')
   const [simDificuldade, setSimDificuldade] = useState('all')
-  const [simQuantidade, setSimQuantidade] = useState(20)
+  const [simQuantFechadas, setSimQuantFechadas] = useState(8)
+  const [simQuantAbertas, setSimQuantAbertas] = useState(2)
+  const [simCountFechadas, setSimCountFechadas] = useState<number | null>(null)
+  const [simCountAbertas, setSimCountAbertas] = useState<number | null>(null)
   const [loadingSimAreas, setLoadingSimAreas] = useState(false)
-  const [loadingSubareas, setLoadingSubareas] = useState(false)
+  const [loadingCount, setLoadingCount] = useState(false)
 
   // Modal Sobre
   const [modalSobreOpen, setModalSobreOpen] = useState(false)
@@ -174,42 +178,71 @@ export default function HomePage() {
     setProvasList([])
     setInfoMsg('')
     setSimAreas([])
-    setSimAreaSel(null)
+    setSimAreasSel([])
     setSimSubareas([])
     setSimSubareasSel([])
+    setSimTagSearch('')
     setSimDificuldade('all')
-    setSimQuantidade(20)
+    setSimQuantFechadas(8)
+    setSimQuantAbertas(2)
+    setSimCountFechadas(null)
+    setSimCountAbertas(null)
   }
 
   // ── Simulado config ──
+  const atualizarContagem = useCallback(async (
+    areas: string[], subs: string[], dif: string, materiaStr: string
+  ) => {
+    if (!materiaStr) return
+    setLoadingCount(true)
+    let q = supabase.from('simulados_questoes').select('tipo').eq('materia', materiaStr)
+    if (areas.length > 0) q = q.in('area', areas)
+    if (subs.length > 0) q = q.in('subarea', subs)
+    if (dif !== 'all') q = q.eq('dificuldade', dif)
+    const { data } = await q
+    setSimCountFechadas(data?.filter((r: { tipo: string }) => r.tipo !== 'aberta').length ?? 0)
+    setSimCountAbertas(data?.filter((r: { tipo: string }) => r.tipo === 'aberta').length ?? 0)
+    setLoadingCount(false)
+  }, [])
+
+  // Atualiza contagem automaticamente quando filtros mudam
+  useEffect(() => {
+    if (!showSimuladoConfig || !modalMateriaAtiva) return
+    const timer = setTimeout(() => {
+      atualizarContagem(simAreasSel, simSubareasSel, simDificuldade, modalMateriaAtiva.nome)
+    }, 300)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simAreasSel, simSubareasSel, simDificuldade, showSimuladoConfig, modalMateriaAtiva])
+
   const abrirSimuladoConfig = async () => {
     if (!modalMateriaAtiva) return
     setShowSimuladoConfig(true)
     setLoadingSimAreas(true)
-    const { data } = await supabase
-      .from('simulados_questoes')
-      .select('area')
-      .eq('materia', modalMateriaAtiva.nome)
-      .neq('area', '')
-    const areas = Array.from(new Set(data?.map((d: { area: string }) => d.area).filter(Boolean) ?? [])).sort()
+    const [areasRes, subsRes] = await Promise.all([
+      supabase.from('simulados_questoes').select('area').eq('materia', modalMateriaAtiva.nome).neq('area', ''),
+      supabase.from('simulados_questoes').select('subarea').eq('materia', modalMateriaAtiva.nome).neq('subarea', '')
+    ])
+    const areas = Array.from(new Set(areasRes.data?.map((d: { area: string }) => d.area).filter(Boolean) ?? [])).sort() as string[]
+    const subs  = Array.from(new Set(subsRes.data?.map((d: { subarea: string }) => d.subarea).filter(Boolean) ?? [])).sort() as string[]
     setSimAreas(areas)
+    setSimSubareas(subs)
     setLoadingSimAreas(false)
   }
 
-  const selecionarArea = async (area: string) => {
+  const toggleArea = async (area: string) => {
     if (!modalMateriaAtiva) return
-    setSimAreaSel(area)
-    setSimSubareasSel([])
-    setLoadingSubareas(true)
-    const { data } = await supabase
-      .from('simulados_questoes')
-      .select('subarea')
-      .eq('materia', modalMateriaAtiva.nome)
-      .eq('area', area)
-      .neq('subarea', '')
-    const subs = Array.from(new Set(data?.map((d: { subarea: string }) => d.subarea).filter(Boolean) ?? [])).sort()
+    const novas = simAreasSel.includes(area)
+      ? simAreasSel.filter(a => a !== area)
+      : [...simAreasSel, area]
+    setSimAreasSel(novas)
+    // Recarregar subareas filtradas pelas áreas selecionadas
+    let q = supabase.from('simulados_questoes').select('subarea').eq('materia', modalMateriaAtiva.nome).neq('subarea', '')
+    if (novas.length > 0) q = q.in('area', novas)
+    const { data } = await q
+    const subs = Array.from(new Set(data?.map((d: { subarea: string }) => d.subarea).filter(Boolean) ?? [])).sort() as string[]
     setSimSubareas(subs)
-    setLoadingSubareas(false)
+    setSimSubareasSel(prev => prev.filter(s => subs.includes(s)))
   }
 
   const toggleSubarea = (sub: string) => {
@@ -219,14 +252,13 @@ export default function HomePage() {
   }
 
   const iniciarSimulado = () => {
-    if (!modalMateriaAtiva || !simAreaSel) return
-    const params = new URLSearchParams({
-      materia: modalMateriaAtiva.nome,
-      area: simAreaSel,
-      dificuldade: simDificuldade,
-      quantidade: String(simQuantidade)
-    })
+    if (!modalMateriaAtiva) return
+    if (simQuantFechadas + simQuantAbertas === 0) return
+    const params = new URLSearchParams({ materia: modalMateriaAtiva.nome, dificuldade: simDificuldade })
+    simAreasSel.forEach(a => params.append('area', a))
     simSubareasSel.forEach(s => params.append('subarea', s))
+    params.set('quantFechadas', String(simQuantFechadas))
+    params.set('quantAbertas', String(simQuantAbertas))
     fecharModal()
     router.push(`/simulado?${params.toString()}`)
   }
@@ -604,90 +636,112 @@ export default function HomePage() {
           {showSimuladoConfig ? (
             /* ── SIMULADO CONFIG ── */
             <div className="sim-config">
-              <button
-                className="sim-back"
-                onClick={() => { setShowSimuladoConfig(false); setSimAreaSel(null); setSimSubareas([]) }}
-              >
-                ← Voltar
-              </button>
+              <button className="sim-back" onClick={() => setShowSimuladoConfig(false)}>← Voltar</button>
 
-              <div className="sim-section-label">GRANDE ÁREA</div>
-              {loadingSimAreas ? (
-                <div className="loading-text" style={{ padding: '12px 0' }}>Carregando...</div>
-              ) : simAreas.length === 0 ? (
-                <div className="loading-text" style={{ padding: '12px 0', fontSize: '0.85rem' }}>
-                  Nenhuma área disponível ainda para {modalSubject}.
-                </div>
-              ) : (
-                <div className="sim-areas-grid">
-                  {simAreas.map(a => (
-                    <button
-                      key={a}
-                      className={`sim-area-btn${simAreaSel === a ? ' active' : ''}`}
-                      onClick={() => selecionarArea(a)}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="sim-hero-title">Simulado por Temas</div>
+              <div className="sim-hero-sub">Monte um treino livre por tags, dificuldade e quantidade de questões.</div>
 
-              {simAreaSel && (
+              {/* GRANDES ÁREAS */}
+              {(loadingSimAreas || simAreas.length > 0) && (
                 <>
-                  <div className="sim-section-label" style={{ marginTop: '20px' }}>SUBÁREAS</div>
-                  {loadingSubareas ? (
-                    <div className="loading-text" style={{ padding: '8px 0' }}>Carregando...</div>
-                  ) : simSubareas.length === 0 ? (
-                    <div className="loading-text" style={{ fontSize: '0.85rem' }}>Nenhuma subárea encontrada.</div>
+                  <div className="sim-section-label">GRANDES ÁREAS</div>
+                  {loadingSimAreas ? (
+                    <div className="sim-loading-inline">Carregando...</div>
                   ) : (
-                    <div className="sim-subareas-list">
-                      {simSubareas.map(sub => (
-                        <label key={sub} className="sim-subarea-item">
-                          <input
-                            type="checkbox"
-                            checked={simSubareasSel.includes(sub)}
-                            onChange={() => toggleSubarea(sub)}
-                          />
-                          <span>{sub}</span>
-                        </label>
+                    <div className="sim-areas-grid">
+                      {simAreas.map(a => (
+                        <button
+                          key={a}
+                          className={`sim-area-btn${simAreasSel.includes(a) ? ' active' : ''}`}
+                          onClick={() => toggleArea(a)}
+                        >{a}</button>
                       ))}
                     </div>
                   )}
-
-                  {simSubareasSel.length > 0 && (
-                    <>
-                      <div className="sim-section-label" style={{ marginTop: '20px' }}>DIFICULDADE</div>
-                      <div className="sim-dif-row">
-                        {[{v:'all',l:'Todas'},{v:'facil',l:'Fácil'},{v:'medio',l:'Médio'},{v:'dificil',l:'Difícil'}].map(d => (
-                          <button
-                            key={d.v}
-                            className={`sim-dif-btn${simDificuldade === d.v ? ' active' : ''}`}
-                            onClick={() => setSimDificuldade(d.v)}
-                          >{d.l}</button>
-                        ))}
-                      </div>
-
-                      <div className="sim-section-label" style={{ marginTop: '16px' }}>
-                        QUESTÕES — <span style={{ color: 'var(--white)', fontWeight: 700 }}>{simQuantidade}</span>
-                      </div>
-                      <input
-                        type="range" min={5} max={60} step={5}
-                        value={simQuantidade}
-                        onChange={e => setSimQuantidade(parseInt(e.target.value))}
-                        className="sim-slider"
-                      />
-
-                      <button
-                        className="btn btn--primary"
-                        style={{ marginTop: '20px', width: '100%', justifyContent: 'center' }}
-                        onClick={iniciarSimulado}
-                      >
-                        Iniciar Simulado →
-                      </button>
-                    </>
-                  )}
+                  <div className="sim-hint">* Você pode selecionar uma ou mais áreas.</div>
                 </>
               )}
+
+              {/* FILTRO DE ASSUNTOS (TAGS) */}
+              <div className="sim-section-label" style={{ marginTop: '20px' }}>FILTRO DE ASSUNTOS (TAGS)</div>
+              <input
+                type="text"
+                className="sim-tag-search"
+                placeholder="🔍 Buscar tag..."
+                value={simTagSearch}
+                onChange={e => setSimTagSearch(e.target.value)}
+              />
+              {simSubareas.length > 0 && (
+                <div className="sim-areas-grid sim-tags-grid">
+                  {(simTagSearch
+                    ? simSubareas.filter(s => s.toLowerCase().includes(simTagSearch.toLowerCase()))
+                    : simSubareas
+                  ).map(sub => (
+                    <button
+                      key={sub}
+                      className={`sim-area-btn${simSubareasSel.includes(sub) ? ' active' : ''}`}
+                      onClick={() => toggleSubarea(sub)}
+                    >{sub}</button>
+                  ))}
+                </div>
+              )}
+              {simSubareas.length === 0 && !loadingSimAreas && (
+                <div className="sim-loading-inline" style={{ fontSize: '0.82rem' }}>
+                  Nenhum assunto disponível ainda para {modalSubject}.
+                </div>
+              )}
+              <div className="sim-hint">* Deixe vazio para usar questões de todos os assuntos.</div>
+
+              {/* DIFICULDADE */}
+              <div className="sim-section-label" style={{ marginTop: '20px' }}>NÍVEL DE DIFICULDADE</div>
+              <div className="sim-dif-row">
+                {[{v:'all',l:'Aleatório'},{v:'facil',l:'Fácil'},{v:'medio',l:'Médio'},{v:'dificil',l:'Difícil'}].map(d => (
+                  <button
+                    key={d.v}
+                    className={`sim-dif-btn${simDificuldade === d.v ? ' active' : ''}`}
+                    onClick={() => setSimDificuldade(d.v)}
+                  >{d.l}</button>
+                ))}
+              </div>
+
+              {/* CONTAGEM */}
+              <div className="sim-count-box">
+                <div className="sim-count-label">Questões encontradas com os filtros atuais:</div>
+                <div className="sim-count-val">
+                  {loadingCount ? '...' : simCountFechadas !== null
+                    ? <>fechadas: <strong>{simCountFechadas}</strong> | abertas: <strong>{simCountAbertas}</strong></>
+                    : '—'}
+                </div>
+              </div>
+
+              {/* QUANTIDADE */}
+              <div className="sim-section-label" style={{ marginTop: '20px' }}>QUANTIDADE DE QUESTÕES</div>
+              <div className="sim-qty-row">
+                <div className="sim-qty-box">
+                  <div className="sim-qty-label">Objetivas (A,B,C,D)</div>
+                  <div className="sim-qty-ctrl">
+                    <button className="sim-qty-btn" onClick={() => setSimQuantFechadas(v => Math.max(0, v - 1))}>◀</button>
+                    <span className="sim-qty-val">{simQuantFechadas}</span>
+                    <button className="sim-qty-btn" onClick={() => setSimQuantFechadas(v => Math.min(simCountFechadas ?? 200, v + 1))}>▶</button>
+                  </div>
+                </div>
+                <div className="sim-qty-box">
+                  <div className="sim-qty-label">Discursivas (Abertas)</div>
+                  <div className="sim-qty-ctrl">
+                    <button className="sim-qty-btn" onClick={() => setSimQuantAbertas(v => Math.max(0, v - 1))}>◀</button>
+                    <span className="sim-qty-val">{simQuantAbertas}</span>
+                    <button className="sim-qty-btn" onClick={() => setSimQuantAbertas(v => Math.min(simCountAbertas ?? 200, v + 1))}>▶</button>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                className="sim-iniciar-btn"
+                onClick={iniciarSimulado}
+                disabled={simQuantFechadas + simQuantAbertas === 0}
+              >
+                🔥 INICIAR SIMULADO
+              </button>
             </div>
           ) : !showProvasList ? (
             /* ── MENU PRINCIPAL ── */

@@ -1064,55 +1064,111 @@ textarea.input-field { resize: vertical; min-height: 120px; line-height: 1.5; }
 .btn-primary:hover { background: #1a6fe0; transform: translateY(-1px); }
 
 /* Simulado config (modal multi-step) */
+/* ── Simulado config modal ── */
 .sim-config { display: flex; flex-direction: column; gap: 0; padding: 4px 0; }
 .sim-back {
-  background: none; border: none; padding: 0 0 16px;
+  background: none; border: none; padding: 0 0 12px;
   color: var(--muted); font-size: 0.88rem; font-family: var(--font-body);
   cursor: pointer; text-align: left; transition: var(--transition);
 }
 .sim-back:hover { color: var(--blue-neon); }
+
+.sim-hero-title {
+  font-size: 1.25rem; font-weight: 700; color: var(--white);
+  text-align: center; margin-bottom: 6px;
+}
+.sim-hero-sub {
+  font-size: 0.82rem; color: var(--muted); text-align: center; margin-bottom: 20px; line-height: 1.5;
+}
+
 .sim-section-label {
   font-size: 11px; font-weight: 700; letter-spacing: 3px;
   color: var(--blue-neon); margin-bottom: 10px;
 }
+.sim-hint {
+  font-size: 0.75rem; color: var(--muted-dim); margin-top: 6px; margin-bottom: 0;
+}
+.sim-loading-inline {
+  font-size: 0.85rem; color: var(--muted); padding: 8px 0;
+}
+
+/* Area pills */
 .sim-areas-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.sim-tags-grid  { max-height: 180px; overflow-y: auto; padding-right: 4px; }
+.sim-tags-grid::-webkit-scrollbar { width: 4px; }
+.sim-tags-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 .sim-area-btn {
-  padding: 8px 16px; border-radius: 50px;
-  border: 1px solid var(--border);
-  background: transparent; color: var(--muted);
-  font-size: 0.85rem; font-family: var(--font-body);
-  cursor: pointer; transition: var(--transition);
-}
-.sim-area-btn:hover { border-color: var(--accent-border); color: var(--white); }
-.sim-area-btn.active { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
-.sim-subareas-list {
-  display: flex; flex-direction: column; gap: 8px;
-  max-height: 200px; overflow-y: auto; padding-right: 4px; margin-bottom: 4px;
-}
-.sim-subareas-list::-webkit-scrollbar { width: 4px; }
-.sim-subareas-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-.sim-subarea-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 12px; border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  cursor: pointer; transition: var(--transition);
-  font-size: 0.88rem; color: var(--muted);
-}
-.sim-subarea-item:hover { border-color: var(--accent-border); color: var(--white); }
-.sim-subarea-item input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
-.sim-subarea-item:has(input:checked) { border-color: var(--accent-border); color: var(--white); background: var(--accent-dim); }
-.sim-dif-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.sim-dif-btn {
-  padding: 6px 14px; border-radius: 50px;
+  padding: 7px 15px; border-radius: 50px;
   border: 1px solid var(--border);
   background: transparent; color: var(--muted);
   font-size: 0.82rem; font-family: var(--font-body);
   cursor: pointer; transition: var(--transition);
 }
+.sim-area-btn:hover { border-color: var(--accent-border); color: var(--white); }
+.sim-area-btn.active { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+
+/* Tag search input */
+.sim-tag-search {
+  width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--white); font-size: 0.88rem; font-family: var(--font-body);
+  margin-bottom: 10px; outline: none; transition: var(--transition);
+}
+.sim-tag-search:focus { border-color: var(--accent-border); }
+.sim-tag-search::placeholder { color: var(--muted); }
+
+/* Difficulty */
+.sim-dif-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.sim-dif-btn {
+  flex: 1; min-width: 72px; padding: 8px 6px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent; color: var(--muted);
+  font-size: 0.82rem; font-family: var(--font-body);
+  cursor: pointer; transition: var(--transition); text-align: center;
+}
 .sim-dif-btn:hover { border-color: var(--accent-border); color: var(--white); }
 .sim-dif-btn.active { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
-.sim-slider { width: 100%; accent-color: var(--accent); cursor: pointer; margin-top: 6px; }
-.sim-tags-preview { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+
+/* Live count */
+.sim-count-box {
+  margin-top: 16px; padding: 12px 16px; border-radius: var(--radius-sm);
+  background: var(--surface2); border: 1px solid var(--border);
+}
+.sim-count-label { font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; }
+.sim-count-val   { font-size: 0.92rem; color: var(--white); }
+.sim-count-val strong { color: var(--blue-neon); }
+
+/* Quantity controls */
+.sim-qty-row { display: flex; gap: 12px; }
+.sim-qty-box {
+  flex: 1; padding: 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface2);
+}
+.sim-qty-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 10px; }
+.sim-qty-ctrl  { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sim-qty-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--white); font-size: 0.75rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: var(--transition);
+}
+.sim-qty-btn:hover { border-color: var(--accent-border); background: var(--accent-dim); }
+.sim-qty-val { font-size: 1.5rem; font-weight: 700; color: var(--white); }
+
+/* Iniciar button */
+.sim-iniciar-btn {
+  margin-top: 20px; width: 100%; padding: 16px;
+  border-radius: var(--radius-md); border: none;
+  background: #f5f0e8; color: #111;
+  font-size: 1rem; font-weight: 800; font-family: var(--font-body);
+  letter-spacing: 1px; cursor: pointer; transition: var(--transition);
+}
+.sim-iniciar-btn:hover:not(:disabled) { background: #fff; transform: translateY(-1px); }
+.sim-iniciar-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Tags preview (simulado page config modal) */
+.sim-tags-preview { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .sim-tag {
   font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 100px;
   background: var(--accent-dim); border: 1px solid var(--accent-border); color: var(--blue-neon);

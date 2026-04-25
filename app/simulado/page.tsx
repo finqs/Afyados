@@ -13,13 +13,14 @@ function SimuladoContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const materia    = searchParams.get('materia') || ''
-  const area       = searchParams.get('area') || ''
-  const subareas   = searchParams.getAll('subarea')       // múltiplos ?subarea=X&subarea=Y
-  const dificuldade = searchParams.get('dificuldade') || 'all'
-  const quantidade  = Math.min(Math.max(parseInt(searchParams.get('quantidade') || '20'), 1), 100)
+  const materia      = searchParams.get('materia') || ''
+  const areas        = searchParams.getAll('area')         // múltiplos ?area=X&area=Y
+  const subareas     = searchParams.getAll('subarea')      // múltiplos ?subarea=X&subarea=Y
+  const dificuldade  = searchParams.get('dificuldade') || 'all'
+  const quantFechadas = Math.min(Math.max(parseInt(searchParams.get('quantFechadas') || '8'), 0), 200)
+  const quantAbertas  = Math.min(Math.max(parseInt(searchParams.get('quantAbertas')  || '0'), 0), 100)
 
-  const tituloHeader = area ? `${materia} · ${area}` : materia
+  const tituloHeader = areas.length === 1 ? `${materia} · ${areas[0]}` : materia
 
   // ── Questões e navegação ──
   const [questoes, setQuestoes] = useState<SimuladoQuestao[]>([])
@@ -68,10 +69,11 @@ function SimuladoContent() {
   // ── Carregar questões ──
   const carregarQuestoes = useCallback(async () => {
     if (!materia) { setErroCarregar('Parâmetros inválidos.'); setLoading(false); return }
+    if (quantFechadas + quantAbertas === 0) { setErroCarregar('Quantidade de questões inválida.'); setLoading(false); return }
     setLoading(true)
 
     let query = supabase.from('simulados_questoes').select('*').eq('materia', materia)
-    if (area) query = query.eq('area', area)
+    if (areas.length > 0)    query = query.in('area', areas)
     if (subareas.length > 0) query = query.in('subarea', subareas)
     if (dificuldade !== 'all') query = query.eq('dificuldade', dificuldade)
 
@@ -85,12 +87,16 @@ function SimuladoContent() {
       return
     }
 
-    // Embaralhar e limitar
-    const shuffled = [...data].sort(() => Math.random() - 0.5)
-    setQuestoes(shuffled.slice(0, quantidade) as SimuladoQuestao[])
+    // Separar por tipo, embaralhar cada pool e combinar
+    const pool = [...data].sort(() => Math.random() - 0.5)
+    const fechadas = pool.filter(q => q.tipo !== 'aberta').slice(0, quantFechadas)
+    const abertas  = pool.filter(q => q.tipo === 'aberta').slice(0, quantAbertas)
+    // Misturar a seleção final
+    const combined = [...fechadas, ...abertas].sort(() => Math.random() - 0.5)
+    setQuestoes(combined as SimuladoQuestao[])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [materia, area, dificuldade, quantidade, subareas.join(',')])
+  }, [materia, dificuldade, quantFechadas, quantAbertas, areas.join(','), subareas.join(',')])
 
   useEffect(() => { carregarQuestoes() }, [carregarQuestoes])
 
@@ -360,9 +366,14 @@ function SimuladoContent() {
         <div className="modal">
           <div className="modal-title-bar">SIMULADO PERSONALIZADO</div>
           <div className="modal-subject">{tituloHeader}</div>
-          {subareas.length > 0 && (
+          {areas.length > 1 && (
             <div className="sim-tags-preview">
-              {subareas.map(s => <span key={s} className="sim-tag">{s}</span>)}
+              {areas.map(a => <span key={a} className="sim-tag">{a}</span>)}
+            </div>
+          )}
+          {subareas.length > 0 && (
+            <div className="sim-tags-preview" style={{ marginTop: areas.length > 1 ? '4px' : 0 }}>
+              {subareas.map(s => <span key={s} className="sim-tag" style={{ opacity: 0.7 }}>{s}</span>)}
             </div>
           )}
           <div className="config-opcoes">
