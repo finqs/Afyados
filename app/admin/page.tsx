@@ -64,7 +64,7 @@ export default function AdminPage() {
   const [ready, setReady] = useState(false)
 
   // Aba ativa
-  const [aba, setAba] = useState<'provas' | 'simulados' | 'apgs'>('provas')
+  const [aba, setAba] = useState<'provas' | 'simulados' | 'apgs' | 'integradora'>('provas')
 
   // ── Campos de PROVA ──
   const [materia, setMateria] = useState('')
@@ -116,13 +116,16 @@ export default function AdminPage() {
   }
 
   // Trocar de aba limpa preview e status
-  const trocarAba = (nova: 'provas' | 'simulados' | 'apgs') => {
+  const trocarAba = (nova: 'provas' | 'simulados' | 'apgs' | 'integradora') => {
     setAba(nova)
     setQuestoes([])
     setStatus('')
     setPdfFile(null)
     setJsonTexto('')
     setApgStatus('')
+    // Prova Integradora pré-fixa a matéria
+    if (nova === 'integradora') setMateria('Integradora')
+    else if (nova !== 'provas') setMateria('')
   }
 
   const setStatusMsg = (msg: string, type: 'info' | 'sucesso' | 'erro' = 'info') => {
@@ -267,7 +270,8 @@ export default function AdminPage() {
     }
   }
 
-  const handleSalvar = () => aba === 'provas' ? handleSalvarProva() : handleSalvarSimulado()
+  const handleSalvar = () =>
+    (aba === 'provas' || aba === 'integradora') ? handleSalvarProva() : handleSalvarSimulado()
 
   // ── Upload de APG ──
   const handleUploadApg = async () => {
@@ -349,6 +353,12 @@ export default function AdminPage() {
             onClick={() => trocarAba('apgs')}
           >
             📚 APGs
+          </button>
+          <button
+            className={`admin-tab${aba === 'integradora' ? ' active' : ''}`}
+            onClick={() => trocarAba('integradora')}
+          >
+            🔗 Integradora
           </button>
         </div>
 
@@ -527,6 +537,64 @@ export default function AdminPage() {
                   {apgStatus}
                 </p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ─────────── ABA INTEGRADORA ─────────── */}
+        {aba === 'integradora' && (
+          <div className="admin-card">
+            <div className="sobre-label">PROVA INTEGRADORA</div>
+            <div className="admin-integradora-badge">
+              <span>IESC</span><span>HAM</span><span>SOI</span>
+            </div>
+            <div className="admin-form">
+              <div className="admin-row">
+                <div className="input-group">
+                  <label className="input-label">Matéria</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value="Integradora"
+                    readOnly
+                    style={{ opacity: 0.6, cursor: 'default' }}
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Período</label>
+                  <select className="input-field" value={periodo} onChange={e => setPeriodo(e.target.value)}>
+                    <option value="">Selecionar</option>
+                    <option value="1">1º Período</option>
+                    <option value="2">2º Período</option>
+                    <option value="3">3º Período</option>
+                    <option value="4">4º Período</option>
+                    <option value="5">5º Período</option>
+                    <option value="6">6º Período</option>
+                    <option value="7">7º Período</option>
+                    <option value="8">8º Período</option>
+                    <option value="9">Internato</option>
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Ano</label>
+                  <input
+                    type="number"
+                    className="input-field"
+                    placeholder="Ex: 2024"
+                    value={ano}
+                    onChange={e => setAno(e.target.value)}
+                  />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Semestre</label>
+                  <select className="input-field" value={semestre} onChange={e => setSemestre(e.target.value)}>
+                    <option value="1">1º semestre</option>
+                    <option value="2">2º semestre</option>
+                  </select>
+                </div>
+              </div>
+              {renderExtracao()}
+              <p className="admin-status" style={{ color: statusColor }}>{status}</p>
             </div>
           </div>
         )}

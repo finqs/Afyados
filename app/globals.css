@@ -1060,6 +1060,8 @@ textarea:focus-visible {
 .btn-salvar-prova:hover { background: #22c55e; transform: translateY(-1px); }
 textarea.input-field { resize: vertical; min-height: 120px; line-height: 1.5; }
 .sobre-label { font-size: 11px; font-weight: 700; letter-spacing: 4px; color: var(--blue-neon); margin-bottom: 20px; }
+.admin-integradora-badge { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; margin-top: -8px; }
+.admin-integradora-badge span { padding: 4px 12px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.25); border-radius: 50px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--blue-neon); }
 .btn-primary { background: var(--accent); color: white; border: none; border-radius: 50px; padding: 12px 28px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: var(--font-body); transition: var(--transition); }
 .btn-primary:hover { background: #1a6fe0; transform: translateY(-1px); }
 
