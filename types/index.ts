@@ -19,6 +19,8 @@ export interface Questao {
   alternativa_e?: string
   gabarito: string
   comentario?: string
+  tem_imagem?: boolean
+  imagem_descricao?: string
 }
 
 export interface ExamAttempt {
@@ -60,4 +62,6 @@ export interface SimuladoQuestao {
   alternativa_e?: string
   gabarito: string
   comentario?: string
+  tem_imagem?: boolean
+  imagem_descricao?: string
 }

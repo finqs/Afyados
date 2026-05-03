@@ -16,6 +16,8 @@ interface QuestaoExtraida {
   alternativa_e?: string
   gabarito: string
   comentario?: string
+  tem_imagem?: boolean
+  imagem_descricao?: string
 }
 
 function normalizeQuestoes(parsed: unknown): QuestaoExtraida[] {
@@ -51,6 +53,8 @@ function normalizeQuestoes(parsed: unknown): QuestaoExtraida[] {
       alternativa_e: q.alternativa_e ? String(q.alternativa_e) : '',
       gabarito: tipo === 'multipla_escolha' ? gabarito.toUpperCase() : gabarito,
       comentario: String(q.comentario ?? ''),
+      tem_imagem: Boolean(q.tem_imagem ?? false),
+      imagem_descricao: String(q.imagem_descricao ?? ''),
     }
   })
 }

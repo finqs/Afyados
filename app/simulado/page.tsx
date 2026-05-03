@@ -367,6 +367,12 @@ function SimuladoContent() {
             <>
               <div className="questao-numero">QUESTÃO {questaoAtual + 1} DE {questoes.length}</div>
               <div className="questao-enunciado">{questoes[questaoAtual]?.enunciado}</div>
+              {questoes[questaoAtual]?.tem_imagem && questoes[questaoAtual]?.imagem_descricao && (
+                <div className="questao-imagem-callout">
+                  <div className="questao-imagem-label">🖼️ Imagem da questão</div>
+                  <div className="questao-imagem-desc">{questoes[questaoAtual].imagem_descricao}</div>
+                </div>
+              )}
               {renderQuestao()}
             </>
           )}

@@ -18,6 +18,8 @@ interface SimQuestaoInput {
   alternativa_e: string
   gabarito: string
   comentario: string
+  tem_imagem: boolean
+  imagem_descricao: string
 }
 
 function validateQuestao(q: unknown, idx: number): SimQuestaoInput {
@@ -49,6 +51,8 @@ function validateQuestao(q: unknown, idx: number): SimQuestaoInput {
     alternativa_e: raw.alternativa_e ? String(raw.alternativa_e) : '',
     gabarito: tipo === 'multipla_escolha' ? gabarito.toUpperCase() : gabarito,
     comentario: String(raw.comentario ?? ''),
+    tem_imagem: Boolean(raw.tem_imagem ?? false),
+    imagem_descricao: String(raw.imagem_descricao ?? ''),
   }
 }
 
@@ -123,8 +127,10 @@ export async function POST(req: NextRequest) {
     alternativa_c: q.alternativa_c,
     alternativa_d: q.alternativa_d,
     alternativa_e: q.alternativa_e,
-    gabarito:      q.gabarito,
-    comentario:    q.comentario,
+    gabarito:          q.gabarito,
+    comentario:        q.comentario,
+    tem_imagem:        q.tem_imagem,
+    imagem_descricao:  q.imagem_descricao,
   }))
 
   const { error: insertErr } = await sb.from('simulados_questoes').insert(rows)

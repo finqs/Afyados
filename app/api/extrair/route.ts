@@ -121,16 +121,28 @@ O formato deve ser exatamente este:
     "alternativa_d": "texto da alternativa D",
     "alternativa_e": "texto da alternativa E se existir, senao string vazia",
     "gabarito": "A",
-    "comentario": "explicacao do gabarito se disponivel"
+    "comentario": "explicacao do gabarito se disponivel",
+    "tem_imagem": false,
+    "imagem_descricao": ""
   }
 ]
 
-Regras:
+Regras gerais:
 - Para questoes de multipla escolha: tipo = "multipla_escolha", gabarito = letra (A, B, C, D ou E)
 - Para questoes dissertativas ou abertas: tipo = "aberta", gabarito = texto completo da resposta esperada, alternativas = strings vazias ""
 - Extraia TODAS as questoes sem excecao, incluindo as abertas
 - O gabarito de multipla escolha deve ser apenas a letra
 - Se nao houver comentario, use ""
+
+Regras para imagens:
+- Se a questao contiver uma imagem (radiografia, ECG, tomografia, ressonancia, histologia, fotografia clinica, grafico, tabela ou qualquer elemento visual), defina tem_imagem = true
+- Em imagem_descricao forneca uma descricao clinica detalhada da imagem, com informacoes suficientes para responder a questao sem ver a imagem original. Exemplos:
+  * ECG: ritmo, frequencia, intervalo PR, QRS, eixo, alteracoes de ST/T, diagnostico sugerido
+  * Radiografia: projecao, orgaos em foco, achados patologicos, localizacao, diagnostico diferencial
+  * Histologia: tecido, coloracao, celulas em destaque, achados microscopicos
+  * Imagem clinica: local anatomico, lesao descrita, caracteristicas morfologicas
+  * Grafico/tabela: tipo, eixos, valores relevantes, tendencia ou resultado principal
+- Se nao houver imagem, tem_imagem = false e imagem_descricao = ""
 - Retorne somente o array JSON valido`
             }
           ]

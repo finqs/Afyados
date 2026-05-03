@@ -1436,6 +1436,32 @@ textarea.input-field { resize: vertical; min-height: 120px; line-height: 1.5; }
   .materias-grid { grid-template-columns: 1fr; }
 }
 
+/* ── Questão com imagem ───────────────────── */
+.questao-imagem-callout {
+  margin: 16px 0 20px;
+  padding: 14px 16px;
+  background: rgba(251, 191, 36, 0.07);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  border-left: 3px solid #fbbf24;
+  border-radius: 10px;
+}
+
+.questao-imagem-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #fbbf24;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.questao-imagem-desc {
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
 /* ── APG List ─────────────────────────────── */
 .apg-list-view { padding: 0 2px; }
 
