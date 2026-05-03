@@ -205,3 +205,68 @@ $$;
 REVOKE EXECUTE ON FUNCTION insert_prova_com_questoes FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION insert_prova_com_questoes FROM authenticated;
 REVOKE EXECUTE ON FUNCTION insert_prova_com_questoes FROM anon;
+
+-- ─────────────────────────────────────────────
+-- Banco de Questões: area e APG por questão
+-- ─────────────────────────────────────────────
+ALTER TABLE questoes
+  ADD COLUMN IF NOT EXISTS area text NOT NULL DEFAULT '';
+ALTER TABLE questoes
+  ADD COLUMN IF NOT EXISTS apg_numero int DEFAULT NULL;
+
+ALTER TABLE simulados_questoes
+  ADD COLUMN IF NOT EXISTS apg_numero int DEFAULT NULL;
+
+-- Atualiza RPC para incluir area e apg_numero
+CREATE OR REPLACE FUNCTION insert_prova_com_questoes(
+  p_materia   text,
+  p_periodo   int,
+  p_ano       int,
+  p_semestre  int,
+  p_questoes  jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_prova_id uuid;
+BEGIN
+  INSERT INTO provas (materia, periodo, ano, semestre)
+  VALUES (p_materia, p_periodo, p_ano, p_semestre)
+  RETURNING id INTO v_prova_id;
+
+  INSERT INTO questoes (
+    prova_id, numero, tipo, enunciado,
+    alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e,
+    gabarito, comentario, tem_imagem, imagem_descricao, area, apg_numero
+  )
+  SELECT
+    v_prova_id,
+    (q->>'numero')::int,
+    COALESCE(q->>'tipo', 'multipla_escolha'),
+    q->>'enunciado',
+    COALESCE(q->>'alternativa_a', ''),
+    COALESCE(q->>'alternativa_b', ''),
+    COALESCE(q->>'alternativa_c', ''),
+    COALESCE(q->>'alternativa_d', ''),
+    COALESCE(q->>'alternativa_e', ''),
+    q->>'gabarito',
+    COALESCE(q->>'comentario', ''),
+    COALESCE((q->>'tem_imagem')::boolean, false),
+    COALESCE(q->>'imagem_descricao', ''),
+    COALESCE(q->>'area', ''),
+    CASE WHEN q->>'apg_numero' IS NOT NULL AND q->>'apg_numero' != ''
+         THEN (q->>'apg_numero')::int ELSE NULL END
+  FROM jsonb_array_elements(p_questoes) AS q;
+
+  RETURN v_prova_id;
+EXCEPTION WHEN OTHERS THEN
+  RAISE;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION insert_prova_com_questoes FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION insert_prova_com_questoes FROM authenticated;
+REVOKE EXECUTE ON FUNCTION insert_prova_com_questoes FROM anon;

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { fileToBase64 } from '@/lib/utils'
@@ -18,6 +18,27 @@ interface QuestaoExtraida {
   comentario?: string
   tem_imagem?: boolean
   imagem_descricao?: string
+  area?: string
+  apg_numero?: number | null
+}
+
+interface BancoQProva {
+  id: string; numero: number; tipo: string; enunciado: string
+  alternativa_a: string; alternativa_b: string; alternativa_c: string; alternativa_d: string; alternativa_e: string
+  gabarito: string; comentario: string; tem_imagem: boolean; imagem_descricao: string
+  area: string; apg_numero: number | null
+  provas: { id: string; materia: string; periodo: number; ano: number; semestre: number } | null
+}
+interface BancoQSim {
+  id: string; materia: string; area: string; subarea: string; numero: number; tipo: string; enunciado: string
+  alternativa_a: string; alternativa_b: string; alternativa_c: string; alternativa_d: string; alternativa_e: string
+  gabarito: string; comentario: string; tem_imagem: boolean; imagem_descricao: string; apg_numero: number | null
+}
+interface EditForm {
+  tipo_banco: 'prova' | 'simulado'; id: string; numero: number; tipo: string
+  enunciado: string; alt_a: string; alt_b: string; alt_c: string; alt_d: string; alt_e: string
+  gabarito: string; comentario: string; area: string; apg_numero: string
+  tem_imagem: boolean; imagem_descricao: string; materia?: string; subarea?: string
 }
 
 function normalizeQuestoes(parsed: unknown): QuestaoExtraida[] {
@@ -55,6 +76,8 @@ function normalizeQuestoes(parsed: unknown): QuestaoExtraida[] {
       comentario: String(q.comentario ?? ''),
       tem_imagem: Boolean(q.tem_imagem ?? false),
       imagem_descricao: String(q.imagem_descricao ?? ''),
+      area: String(q.area ?? ''),
+      apg_numero: q.apg_numero != null ? Number(q.apg_numero) : null,
     }
   })
 }
@@ -64,7 +87,7 @@ export default function AdminPage() {
   const [ready, setReady] = useState(false)
 
   // Aba ativa
-  const [aba, setAba] = useState<'provas' | 'simulados' | 'apgs' | 'integradora'>('provas')
+  const [aba, setAba] = useState<'provas' | 'simulados' | 'apgs' | 'integradora' | 'banco'>('provas')
 
   // ── Campos de PROVA ──
   const [materia, setMateria] = useState('')
@@ -99,6 +122,18 @@ export default function AdminPage() {
   const [questoes, setQuestoes] = useState<QuestaoExtraida[]>([])
   const [salvando, setSalvando] = useState(false)
 
+  // Banco de questões
+  const [bancoSection, setBancoSection] = useState<'provas' | 'simulados'>('provas')
+  const [bancoQProvas, setBancoQProvas] = useState<BancoQProva[]>([])
+  const [bancoQSims, setBancoQSims] = useState<BancoQSim[]>([])
+  const [loadingBanco, setLoadingBanco] = useState(false)
+  const [bancoFiltro, setBancoFiltro] = useState('')
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [editForm, setEditForm] = useState<EditForm | null>(null)
+  const [salvandoEdit, setSalvandoEdit] = useState(false)
+  const [editStatus, setEditStatus] = useState('')
+  const [editStatusType, setEditStatusType] = useState<'sucesso' | 'erro'>('sucesso')
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace('/login'); return }
@@ -116,7 +151,7 @@ export default function AdminPage() {
   }
 
   // Trocar de aba limpa preview e status
-  const trocarAba = (nova: 'provas' | 'simulados' | 'apgs' | 'integradora') => {
+  const trocarAba = (nova: 'provas' | 'simulados' | 'apgs' | 'integradora' | 'banco') => {
     setAba(nova)
     setQuestoes([])
     setStatus('')
@@ -126,6 +161,7 @@ export default function AdminPage() {
     // Prova Integradora pré-fixa a matéria
     if (nova === 'integradora') setMateria('Integradora')
     else if (nova !== 'provas') setMateria('')
+    if (nova === 'banco') carregarBanco('provas')
   }
 
   const setStatusMsg = (msg: string, type: 'info' | 'sucesso' | 'erro' = 'info') => {
@@ -317,6 +353,94 @@ export default function AdminPage() {
     }
   }
 
+  const updateQuestaoField = (idx: number, field: keyof QuestaoExtraida, value: unknown) => {
+    setQuestoes(prev => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q))
+  }
+
+  const carregarBanco = useCallback(async (section: 'provas' | 'simulados') => {
+    setLoadingBanco(true)
+    setBancoFiltro('')
+    if (section === 'provas') {
+      const { data } = await supabase
+        .from('questoes')
+        .select('id,numero,tipo,enunciado,alternativa_a,alternativa_b,alternativa_c,alternativa_d,alternativa_e,gabarito,comentario,tem_imagem,imagem_descricao,area,apg_numero,provas(id,materia,periodo,ano,semestre)')
+        .order('numero', { ascending: true })
+        .limit(500)
+      setBancoQProvas((data ?? []) as unknown as BancoQProva[])
+    } else {
+      const { data } = await supabase
+        .from('simulados_questoes')
+        .select('*')
+        .order('materia', { ascending: true })
+        .order('area', { ascending: true })
+        .order('numero', { ascending: true })
+        .limit(500)
+      setBancoQSims((data ?? []) as BancoQSim[])
+    }
+    setLoadingBanco(false)
+  }, [])
+
+  const iniciarEdicao = (q: BancoQProva | BancoQSim, tipo: 'prova' | 'simulado') => {
+    const area = tipo === 'prova' ? (q as BancoQProva).area : (q as BancoQSim).area
+    setEditForm({
+      tipo_banco: tipo, id: q.id, numero: q.numero, tipo: q.tipo,
+      enunciado: q.enunciado, alt_a: q.alternativa_a, alt_b: q.alternativa_b,
+      alt_c: q.alternativa_c, alt_d: q.alternativa_d, alt_e: q.alternativa_e,
+      gabarito: q.gabarito, comentario: q.comentario, area,
+      apg_numero: q.apg_numero != null ? String(q.apg_numero) : '',
+      tem_imagem: q.tem_imagem, imagem_descricao: q.imagem_descricao,
+      materia: tipo === 'simulado' ? (q as BancoQSim).materia : undefined,
+      subarea: tipo === 'simulado' ? (q as BancoQSim).subarea : undefined,
+    })
+    setEditStatus('')
+  }
+
+  const salvarEdicao = async () => {
+    if (!editForm) return
+    setSalvandoEdit(true)
+    try {
+      const freshToken = await getFreshToken()
+      if (!freshToken) throw new Error('Sessão expirada.')
+      const endpoint = editForm.tipo_banco === 'prova'
+        ? `/api/questoes/${editForm.id}`
+        : `/api/simulados-questoes/${editForm.id}`
+      const body: Record<string, unknown> = {
+        enunciado: editForm.enunciado,
+        alternativa_a: editForm.alt_a, alternativa_b: editForm.alt_b,
+        alternativa_c: editForm.alt_c, alternativa_d: editForm.alt_d,
+        alternativa_e: editForm.alt_e, gabarito: editForm.gabarito,
+        comentario: editForm.comentario, area: editForm.area,
+        apg_numero: editForm.apg_numero ? Number(editForm.apg_numero) : null,
+        tem_imagem: editForm.tem_imagem, imagem_descricao: editForm.imagem_descricao,
+      }
+      if (editForm.tipo_banco === 'simulado') body.subarea = editForm.subarea ?? ''
+      const res = await fetch(endpoint, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${freshToken}` },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao salvar.')
+      setEditStatus('✅ Salvo!')
+      setEditStatusType('sucesso')
+      if (editForm.tipo_banco === 'prova') {
+        setBancoQProvas(prev => prev.map(q => q.id === editForm.id
+          ? { ...q, enunciado: editForm.enunciado, alternativa_a: editForm.alt_a, alternativa_b: editForm.alt_b, alternativa_c: editForm.alt_c, alternativa_d: editForm.alt_d, alternativa_e: editForm.alt_e, gabarito: editForm.gabarito, comentario: editForm.comentario, area: editForm.area, apg_numero: editForm.apg_numero ? Number(editForm.apg_numero) : null, tem_imagem: editForm.tem_imagem, imagem_descricao: editForm.imagem_descricao }
+          : q))
+      } else {
+        setBancoQSims(prev => prev.map(q => q.id === editForm.id
+          ? { ...q, enunciado: editForm.enunciado, alternativa_a: editForm.alt_a, alternativa_b: editForm.alt_b, alternativa_c: editForm.alt_c, alternativa_d: editForm.alt_d, alternativa_e: editForm.alt_e, gabarito: editForm.gabarito, comentario: editForm.comentario, area: editForm.area, subarea: editForm.subarea ?? '', apg_numero: editForm.apg_numero ? Number(editForm.apg_numero) : null, tem_imagem: editForm.tem_imagem, imagem_descricao: editForm.imagem_descricao }
+          : q))
+      }
+      setTimeout(() => setEditForm(null), 1600)
+    } catch (err) {
+      setEditStatus(`❌ ${(err as Error).message}`)
+      setEditStatusType('erro')
+    } finally {
+      setSalvandoEdit(false)
+    }
+  }
+
   const statusColor = statusType === 'sucesso' ? '#4ade80' : statusType === 'erro' ? '#f87171' : 'var(--blue-neon)'
 
   if (!ready) return null
@@ -359,6 +483,12 @@ export default function AdminPage() {
             onClick={() => trocarAba('integradora')}
           >
             🔗 Integradora
+          </button>
+          <button
+            className={`admin-tab${aba === 'banco' ? ' active' : ''}`}
+            onClick={() => trocarAba('banco')}
+          >
+            📦 Banco
           </button>
         </div>
 
@@ -599,6 +729,9 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* ─────────── ABA BANCO ─────────── */}
+        {aba === 'banco' && renderBancoView()}
+
         {/* QUESTÕES PREVIEW */}
         {questoes.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -624,6 +757,45 @@ export default function AdminPage() {
                 {q.comentario && (
                   <div className="questao-comentario">{q.comentario}</div>
                 )}
+                {(aba === 'provas' || aba === 'integradora') && (
+                  <div className="questao-meta-row">
+                    <div className="questao-meta-field">
+                      <label className="questao-meta-label">Área</label>
+                      <input
+                        className="questao-meta-input"
+                        placeholder="Ex: Sistema Nervoso Central"
+                        value={q.area ?? ''}
+                        onChange={e => updateQuestaoField(idx, 'area', e.target.value)}
+                      />
+                    </div>
+                    <div className="questao-meta-field">
+                      <label className="questao-meta-label">APG nº</label>
+                      <input
+                        type="number"
+                        min={1}
+                        className="questao-meta-input questao-meta-input--sm"
+                        placeholder="0"
+                        value={q.apg_numero ?? ''}
+                        onChange={e => updateQuestaoField(idx, 'apg_numero', e.target.value ? Number(e.target.value) : null)}
+                      />
+                    </div>
+                  </div>
+                )}
+                {aba === 'simulados' && (
+                  <div className="questao-meta-row">
+                    <div className="questao-meta-field">
+                      <label className="questao-meta-label">APG nº</label>
+                      <input
+                        type="number"
+                        min={1}
+                        className="questao-meta-input questao-meta-input--sm"
+                        placeholder="0"
+                        value={q.apg_numero ?? ''}
+                        onChange={e => updateQuestaoField(idx, 'apg_numero', e.target.value ? Number(e.target.value) : null)}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
             <button
@@ -633,12 +805,15 @@ export default function AdminPage() {
             >
               {salvando
                 ? 'Salvando...'
-                : aba === 'provas'
+                : aba === 'provas' || aba === 'integradora'
                   ? 'Salvar prova no banco de dados'
                   : 'Adicionar questões ao banco de simulados'}
             </button>
           </div>
         )}
+
+        {/* EDIT MODAL */}
+        {editForm && renderEditModal()}
       </main>
     </>
   )
@@ -690,6 +865,277 @@ export default function AdminPage() {
           </div>
         </div>
       </>
+    )
+  }
+
+  function renderBancoView() {
+    const filtro = bancoFiltro.toLowerCase()
+    const qProvasFiltradas = bancoFiltro
+      ? bancoQProvas.filter(q =>
+          (q.provas?.materia ?? '').toLowerCase().includes(filtro) ||
+          q.enunciado.toLowerCase().includes(filtro) ||
+          q.area.toLowerCase().includes(filtro)
+        )
+      : bancoQProvas
+
+    const qSimsFiltradas = bancoFiltro
+      ? bancoQSims.filter(q =>
+          q.materia.toLowerCase().includes(filtro) ||
+          q.area.toLowerCase().includes(filtro) ||
+          q.enunciado.toLowerCase().includes(filtro)
+        )
+      : bancoQSims
+
+    // Group provas by materia > ano.semestre
+    const provasGrupo: Record<string, Record<string, BancoQProva[]>> = {}
+    qProvasFiltradas.forEach(q => {
+      const mat = q.provas?.materia ?? '—'
+      const chave = q.provas ? `${q.provas.ano}.${q.provas.semestre}` : '—'
+      if (!provasGrupo[mat]) provasGrupo[mat] = {}
+      if (!provasGrupo[mat][chave]) provasGrupo[mat][chave] = []
+      provasGrupo[mat][chave].push(q)
+    })
+
+    // Group sims by materia > area
+    const simsGrupo: Record<string, Record<string, BancoQSim[]>> = {}
+    qSimsFiltradas.forEach(q => {
+      if (!simsGrupo[q.materia]) simsGrupo[q.materia] = {}
+      if (!simsGrupo[q.materia][q.area]) simsGrupo[q.materia][q.area] = []
+      simsGrupo[q.materia][q.area].push(q)
+    })
+
+    const toggleGroup = (key: string) => {
+      setExpandedGroups(prev => {
+        const next = new Set(prev)
+        if (next.has(key)) next.delete(key)
+        else next.add(key)
+        return next
+      })
+    }
+
+    return (
+      <div className="banco-view">
+        {/* sub-tabs */}
+        <div className="banco-subtabs">
+          <button
+            className={`banco-subtab${bancoSection === 'provas' ? ' active' : ''}`}
+            onClick={() => { setBancoSection('provas'); carregarBanco('provas') }}
+          >
+            📄 Provas <span className="banco-count">{bancoQProvas.length}</span>
+          </button>
+          <button
+            className={`banco-subtab${bancoSection === 'simulados' ? ' active' : ''}`}
+            onClick={() => { setBancoSection('simulados'); carregarBanco('simulados') }}
+          >
+            📝 Simulados <span className="banco-count">{bancoQSims.length}</span>
+          </button>
+        </div>
+
+        {/* filter */}
+        <div className="banco-filtro-row">
+          <input
+            className="input-field"
+            placeholder="🔍 Filtrar por matéria, área ou trecho do enunciado..."
+            value={bancoFiltro}
+            onChange={e => setBancoFiltro(e.target.value)}
+          />
+          <button className="btn-primary" style={{ padding: '10px 20px', fontSize: '0.85rem' }} onClick={() => carregarBanco(bancoSection)}>
+            ↺ Recarregar
+          </button>
+        </div>
+
+        {loadingBanco ? (
+          <div className="banco-loading">Carregando questões...</div>
+        ) : bancoSection === 'provas' ? (
+          Object.keys(provasGrupo).length === 0 ? (
+            <div className="banco-loading">Nenhuma questão encontrada.</div>
+          ) : (
+            Object.entries(provasGrupo).map(([materia, provas]) => (
+              <div key={materia} className="banco-grupo">
+                <div className="banco-grupo-header">
+                  <span className="banco-grupo-materia">{materia}</span>
+                  <span className="banco-grupo-count">{Object.values(provas).flat().length} questões</span>
+                </div>
+                {Object.entries(provas).map(([provaChave, questoes]) => {
+                  const gKey = `p-${materia}-${provaChave}`
+                  const open = expandedGroups.has(gKey)
+                  return (
+                    <div key={provaChave} className="banco-subgrupo">
+                      <button className="banco-subgrupo-toggle" onClick={() => toggleGroup(gKey)}>
+                        <span>{open ? '▾' : '▸'} Prova {provaChave}</span>
+                        <span className="banco-grupo-count">{questoes.length} questões</span>
+                      </button>
+                      {open && (
+                        <div className="banco-questoes-list">
+                          {questoes.map(q => (
+                            <div key={q.id} className="banco-questao-item">
+                              <div className="banco-questao-left">
+                                <span className="banco-questao-num">Q{q.numero}</span>
+                                <span className={`banco-tipo-badge banco-tipo-badge--${q.tipo === 'aberta' ? 'aberta' : 'mc'}`}>
+                                  {q.tipo === 'aberta' ? 'Aberta' : 'MC'}
+                                </span>
+                                <span className="banco-questao-enunciado">{q.enunciado.slice(0, 80)}{q.enunciado.length > 80 ? '...' : ''}</span>
+                              </div>
+                              <div className="banco-questao-right">
+                                {q.area && <span className="banco-area-badge">{q.area}</span>}
+                                {q.apg_numero && <span className="banco-apg-badge">APG {q.apg_numero}</span>}
+                                <button className="banco-edit-btn" onClick={() => iniciarEdicao(q, 'prova')}>✏️ Editar</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ))
+          )
+        ) : (
+          Object.keys(simsGrupo).length === 0 ? (
+            <div className="banco-loading">Nenhuma questão encontrada.</div>
+          ) : (
+            Object.entries(simsGrupo).map(([materia, areas]) => (
+              <div key={materia} className="banco-grupo">
+                <div className="banco-grupo-header">
+                  <span className="banco-grupo-materia">{materia}</span>
+                  <span className="banco-grupo-count">{Object.values(areas).flat().length} questões</span>
+                </div>
+                {Object.entries(areas).map(([area, questoes]) => {
+                  const gKey = `s-${materia}-${area}`
+                  const open = expandedGroups.has(gKey)
+                  return (
+                    <div key={area} className="banco-subgrupo">
+                      <button className="banco-subgrupo-toggle" onClick={() => toggleGroup(gKey)}>
+                        <span>{open ? '▾' : '▸'} {area}</span>
+                        <span className="banco-grupo-count">{questoes.length} questões</span>
+                      </button>
+                      {open && (
+                        <div className="banco-questoes-list">
+                          {questoes.map(q => (
+                            <div key={q.id} className="banco-questao-item">
+                              <div className="banco-questao-left">
+                                <span className="banco-questao-num">Q{q.numero}</span>
+                                <span className={`banco-tipo-badge banco-tipo-badge--${q.tipo === 'aberta' ? 'aberta' : 'mc'}`}>
+                                  {q.tipo === 'aberta' ? 'Aberta' : 'MC'}
+                                </span>
+                                <span className="banco-questao-enunciado">{q.enunciado.slice(0, 80)}{q.enunciado.length > 80 ? '...' : ''}</span>
+                              </div>
+                              <div className="banco-questao-right">
+                                {q.subarea && <span className="banco-area-badge">{q.subarea}</span>}
+                                {q.apg_numero && <span className="banco-apg-badge">APG {q.apg_numero}</span>}
+                                <button className="banco-edit-btn" onClick={() => iniciarEdicao(q, 'simulado')}>✏️ Editar</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ))
+          )
+        )}
+      </div>
+    )
+  }
+
+  function renderEditModal() {
+    if (!editForm) return null
+    const ef = editForm
+    const setEF = (patch: Partial<EditForm>) => setEditForm(prev => prev ? { ...prev, ...patch } : null)
+    const editColor = editStatusType === 'sucesso' ? '#4ade80' : '#f87171'
+
+    return (
+      <div className="edit-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setEditForm(null) }}>
+        <div className="edit-modal">
+          <div className="edit-modal-header">
+            <div className="edit-modal-title">
+              ✏️ Editando Questão {ef.numero}
+              <span className="edit-modal-badge">{ef.tipo_banco === 'prova' ? '📄 Prova' : '📝 Simulado'}</span>
+            </div>
+            <button className="edit-modal-close" onClick={() => setEditForm(null)}>×</button>
+          </div>
+          <div className="edit-modal-body">
+            {/* Metadados */}
+            <div className="edit-section-label">METADADOS</div>
+            <div className="admin-row admin-row--2col">
+              <div className="input-group">
+                <label className="input-label">Área</label>
+                <input className="input-field" value={ef.area} onChange={e => setEF({ area: e.target.value })} placeholder="Ex: Sistema Nervoso Central" />
+              </div>
+              <div className="input-group">
+                <label className="input-label">APG nº</label>
+                <input type="number" min={1} className="input-field" value={ef.apg_numero} onChange={e => setEF({ apg_numero: e.target.value })} placeholder="0" />
+              </div>
+            </div>
+            {ef.tipo_banco === 'simulado' && (
+              <div className="input-group">
+                <label className="input-label">Subárea</label>
+                <input className="input-field" value={ef.subarea ?? ''} onChange={e => setEF({ subarea: e.target.value })} placeholder="Ex: Irrigação Cardíaca" />
+              </div>
+            )}
+
+            {/* Enunciado */}
+            <div className="edit-section-label" style={{ marginTop: '20px' }}>ENUNCIADO</div>
+            <div className="input-group">
+              <textarea className="input-field" rows={5} value={ef.enunciado} onChange={e => setEF({ enunciado: e.target.value })} />
+            </div>
+
+            {/* Alternativas (only for multipla_escolha) */}
+            {ef.tipo !== 'aberta' && (
+              <>
+                <div className="edit-section-label" style={{ marginTop: '20px' }}>ALTERNATIVAS</div>
+                {(['A','B','C','D','E'] as const).map(letra => {
+                  const field = `alt_${letra.toLowerCase()}` as keyof EditForm
+                  return (
+                    <div key={letra} className="input-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                      <span className="alternativa-letra" style={{ minWidth: '28px' }}>{letra}</span>
+                      <input className="input-field" value={String(ef[field] ?? '')} onChange={e => setEF({ [field]: e.target.value } as Partial<EditForm>)} />
+                    </div>
+                  )
+                })}
+              </>
+            )}
+
+            {/* Gabarito */}
+            <div className="edit-section-label" style={{ marginTop: '20px' }}>GABARITO</div>
+            <div className="input-group">
+              <input className="input-field" value={ef.gabarito} onChange={e => setEF({ gabarito: e.target.value.toUpperCase() })} placeholder={ef.tipo === 'aberta' ? 'Resposta esperada' : 'A, B, C, D ou E'} />
+            </div>
+
+            {/* Comentario */}
+            <div className="edit-section-label" style={{ marginTop: '20px' }}>COMENTÁRIO</div>
+            <div className="input-group">
+              <textarea className="input-field" rows={3} value={ef.comentario} onChange={e => setEF({ comentario: e.target.value })} placeholder="Explicação do gabarito..." />
+            </div>
+
+            {/* Imagem */}
+            <div className="edit-section-label" style={{ marginTop: '20px' }}>IMAGEM</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', color: '#e2e8f0' }}>
+                <input type="checkbox" checked={ef.tem_imagem} onChange={e => setEF({ tem_imagem: e.target.checked })} />
+                Questão tem imagem
+              </label>
+            </div>
+            {ef.tem_imagem && (
+              <div className="input-group">
+                <textarea className="input-field" rows={3} value={ef.imagem_descricao} onChange={e => setEF({ imagem_descricao: e.target.value })} placeholder="Descrição detalhada da imagem..." />
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="edit-modal-actions">
+              <button className="btn btn--outline" onClick={() => setEditForm(null)}>Cancelar</button>
+              <button className="btn btn--primary" onClick={salvarEdicao} disabled={salvandoEdit}>
+                {salvandoEdit ? 'Salvando...' : '💾 Salvar Questão'}
+              </button>
+            </div>
+            {editStatus && <p style={{ color: editColor, fontSize: '0.9rem', marginTop: '8px', textAlign: 'center' }}>{editStatus}</p>}
+          </div>
+        </div>
+      </div>
     )
   }
 }

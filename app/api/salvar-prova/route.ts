@@ -20,6 +20,8 @@ interface QuestaoInput {
   comentario?: string
   tem_imagem: boolean
   imagem_descricao: string
+  area: string
+  apg_numero: number | null
 }
 
 function validateQuestao(q: unknown, idx: number): QuestaoInput {
@@ -53,6 +55,8 @@ function validateQuestao(q: unknown, idx: number): QuestaoInput {
     comentario: String(raw.comentario ?? ''),
     tem_imagem: Boolean(raw.tem_imagem ?? false),
     imagem_descricao: String(raw.imagem_descricao ?? ''),
+    area: String(raw.area ?? ''),
+    apg_numero: raw.apg_numero != null && raw.apg_numero !== '' ? Number(raw.apg_numero) : null,
   }
 }
 
@@ -157,6 +161,8 @@ export async function POST(req: NextRequest) {
     comentario:        q.comentario ?? '',
     tem_imagem:        q.tem_imagem,
     imagem_descricao:  q.imagem_descricao,
+    area:              q.area,
+    apg_numero:        q.apg_numero,
   }))
 
   const { error: qErr } = await sb.from('questoes').insert(questoesRows)

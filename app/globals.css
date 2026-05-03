@@ -1430,6 +1430,58 @@ textarea.input-field { resize: vertical; min-height: 120px; line-height: 1.5; }
   .perfil-hero { flex-direction: column; text-align: center; }
 }
 
+/* ── Questão preview: metadados (área / APG) ── */
+.questao-meta-row { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.questao-meta-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
+.questao-meta-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em; color: var(--blue-neon); text-transform: uppercase; }
+.questao-meta-input { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; color: #e2e8f0; font-size: 0.85rem; font-family: var(--font-body); }
+.questao-meta-input--sm { max-width: 80px; }
+
+/* ── Banco de Questões ── */
+.banco-view { display: flex; flex-direction: column; gap: 16px; }
+.banco-subtabs { display: flex; gap: 8px; }
+.banco-subtab { padding: 8px 18px; border-radius: 50px; border: 1px solid var(--border); background: transparent; color: #8899b0; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 6px; font-family: var(--font-body); }
+.banco-subtab:hover { color: var(--white); border-color: var(--accent); }
+.banco-subtab.active { background: var(--accent); color: white; border-color: var(--accent); }
+.banco-count { background: rgba(255,255,255,0.15); border-radius: 20px; padding: 1px 7px; font-size: 0.75rem; }
+.banco-filtro-row { display: flex; gap: 10px; align-items: center; }
+.banco-filtro-row .input-field { flex: 1; margin-bottom: 0; }
+.banco-loading { color: #8899b0; font-size: 0.9rem; padding: 20px 0; text-align: center; }
+.banco-grupo { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.banco-grupo-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.banco-grupo-materia { font-weight: 700; font-size: 0.95rem; color: var(--blue-neon); letter-spacing: 0.04em; }
+.banco-grupo-count { font-size: 0.78rem; color: #8899b0; }
+.banco-subgrupo { border-bottom: 1px solid rgba(56,189,248,0.08); }
+.banco-subgrupo:last-child { border-bottom: none; }
+.banco-subgrupo-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; background: transparent; border: none; color: #c8d4e0; font-size: 0.88rem; font-weight: 600; cursor: pointer; font-family: var(--font-body); transition: background 0.15s; }
+.banco-subgrupo-toggle:hover { background: rgba(56,189,248,0.05); }
+.banco-questoes-list { display: flex; flex-direction: column; }
+.banco-questao-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 20px; border-top: 1px solid rgba(56,189,248,0.06); transition: background 0.1s; flex-wrap: wrap; }
+.banco-questao-item:hover { background: rgba(56,189,248,0.04); }
+.banco-questao-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.banco-questao-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+.banco-questao-num { font-size: 0.72rem; font-weight: 700; color: #8899b0; white-space: nowrap; min-width: 28px; }
+.banco-tipo-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
+.banco-tipo-badge--mc { background: rgba(56,189,248,0.12); color: var(--blue-neon); }
+.banco-tipo-badge--aberta { background: rgba(74,222,128,0.1); color: #4ade80; }
+.banco-questao-enunciado { font-size: 0.83rem; color: #c8d4e0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
+.banco-area-badge { font-size: 0.7rem; padding: 3px 9px; background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); color: #fbbf24; border-radius: 20px; white-space: nowrap; }
+.banco-apg-badge { font-size: 0.7rem; padding: 3px 9px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.2); color: var(--blue-neon); border-radius: 20px; white-space: nowrap; }
+.banco-edit-btn { font-size: 0.78rem; padding: 5px 12px; background: transparent; border: 1px solid var(--border); color: #8899b0; border-radius: 6px; cursor: pointer; font-family: var(--font-body); transition: var(--transition); white-space: nowrap; }
+.banco-edit-btn:hover { color: var(--white); border-color: var(--accent); background: rgba(30,111,237,0.1); }
+
+/* ── Edit Modal ── */
+.edit-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto; }
+.edit-modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 100%; max-width: 680px; margin: auto; }
+.edit-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); }
+.edit-modal-title { font-weight: 700; font-size: 1rem; color: var(--white); display: flex; align-items: center; gap: 10px; }
+.edit-modal-badge { font-size: 0.72rem; padding: 3px 10px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.2); color: var(--blue-neon); border-radius: 20px; }
+.edit-modal-close { background: none; border: none; color: #8899b0; font-size: 1.4rem; cursor: pointer; line-height: 1; padding: 0 4px; }
+.edit-modal-close:hover { color: var(--white); }
+.edit-modal-body { padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+.edit-section-label { font-size: 10px; font-weight: 700; letter-spacing: 4px; color: var(--blue-neon); }
+.edit-modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px; }
+
 @media (max-width: 480px) {
   .hero__stats { gap: 16px; }
   .period-tab { padding: 8px 14px; font-size: 0.82rem; }

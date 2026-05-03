@@ -20,6 +20,7 @@ interface SimQuestaoInput {
   comentario: string
   tem_imagem: boolean
   imagem_descricao: string
+  apg_numero: number | null
 }
 
 function validateQuestao(q: unknown, idx: number): SimQuestaoInput {
@@ -53,6 +54,7 @@ function validateQuestao(q: unknown, idx: number): SimQuestaoInput {
     comentario: String(raw.comentario ?? ''),
     tem_imagem: Boolean(raw.tem_imagem ?? false),
     imagem_descricao: String(raw.imagem_descricao ?? ''),
+    apg_numero: raw.apg_numero != null && raw.apg_numero !== '' ? Number(raw.apg_numero) : null,
   }
 }
 
@@ -131,6 +133,7 @@ export async function POST(req: NextRequest) {
     comentario:        q.comentario,
     tem_imagem:        q.tem_imagem,
     imagem_descricao:  q.imagem_descricao,
+    apg_numero:        q.apg_numero,
   }))
 
   const { error: insertErr } = await sb.from('simulados_questoes').insert(rows)
