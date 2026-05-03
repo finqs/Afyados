@@ -183,13 +183,11 @@ export default function AdminPage() {
 
   const getDadosSimulado = () => {
     if (!simMateria.trim()) { setStatusMsg('Preencha a Matéria.', 'erro'); return null }
-    if (!simArea.trim()) { setStatusMsg('Preencha a Grande Área.', 'erro'); return null }
-    if (!simSubarea.trim()) { setStatusMsg('Preencha a Subárea.', 'erro'); return null }
     return { materia: simMateria.trim(), area: simArea.trim(), subarea: simSubarea.trim(), dificuldade: simDificuldade }
   }
 
   const validarCampos = () =>
-    aba === 'provas' ? getDadosProva() !== null : getDadosSimulado() !== null
+    (aba === 'provas' || aba === 'integradora') ? getDadosProva() !== null : getDadosSimulado() !== null
 
   // ── Extração compartilhada ──
   const handleExtrair = async () => {
@@ -297,7 +295,7 @@ export default function AdminPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao salvar questões.')
 
-      setStatusMsg(`✅ ${questoes.length} questões adicionadas → ${dados.materia} / ${dados.area} / ${dados.subarea}`, 'sucesso')
+      setStatusMsg(`✅ ${questoes.length} questões adicionadas → ${dados.materia}`, 'sucesso')
       setQuestoes([])
     } catch (err) {
       setStatusMsg(`❌ ${(err as Error).message}`, 'erro')
@@ -570,28 +568,6 @@ export default function AdminPage() {
                     <option value="medio">Médio</option>
                     <option value="dificil">Difícil</option>
                   </select>
-                </div>
-              </div>
-              <div className="admin-row admin-row--2col">
-                <div className="input-group">
-                  <label className="input-label">Grande Área</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Ex: Sistema Cardiovascular"
-                    value={simArea}
-                    onChange={e => setSimArea(e.target.value)}
-                  />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Subárea</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Ex: Irrigação Cardíaca"
-                    value={simSubarea}
-                    onChange={e => setSimSubarea(e.target.value)}
-                  />
                 </div>
               </div>
               {renderExtracao()}

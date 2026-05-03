@@ -95,8 +95,6 @@ export async function POST(req: NextRequest) {
   const dificuldade = String(body.dificuldade ?? 'medio').trim()
 
   if (!materia)    return NextResponse.json({ error: 'Matéria ausente.'    }, { status: 422 })
-  if (!area)       return NextResponse.json({ error: 'Grande Área ausente.' }, { status: 422 })
-  if (!subarea)    return NextResponse.json({ error: 'Subárea ausente.'     }, { status: 422 })
   if (!VALID_DIFICULDADE.has(dificuldade)) {
     return NextResponse.json({ error: 'Dificuldade inválida (facil|medio|dificil).' }, { status: 422 })
   }
