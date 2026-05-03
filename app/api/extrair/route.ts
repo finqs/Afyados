@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
 
+// Vercel: aumenta o timeout da função para 60s (PDFs grandes + Claude podem levar ~30s)
+export const maxDuration = 60
+
 const MAX_PDF_BASE64_LENGTH = 14_000_000 // ~10MB PDF
 
 // ── Rate limiting (in-memory; resets per serverless instance) ──

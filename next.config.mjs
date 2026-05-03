@@ -6,6 +6,12 @@ const scriptSrc = isDev
   : "script-src 'self' 'unsafe-inline'"
 
 const nextConfig = {
+  // Aumenta o limite do body parser para suportar PDFs grandes em base64 (~10MB PDF → ~14MB base64)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '20mb',
+    },
+  },
   async headers() {
     return [
       {
