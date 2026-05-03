@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     const client = new Anthropic({ apiKey })
 
     const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-5',
       max_tokens: 16000,
       messages: [
         {
@@ -151,7 +151,15 @@ Regras para imagens:
     })
 
     const texto = message.content[0].type === 'text' ? message.content[0].text.trim() : ''
-    const jsonLimpo = texto.replace(/```json|```/g, '').trim()
+
+    // Extrai o array JSON de forma robusta:
+    // 1. Remove blocos de código markdown  2. Localiza [ ... ] mais externo
+    const semMarkdown = texto.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim()
+    const start = semMarkdown.indexOf('[')
+    const end   = semMarkdown.lastIndexOf(']')
+    const jsonLimpo = (start !== -1 && end > start)
+      ? semMarkdown.slice(start, end + 1)
+      : semMarkdown
 
     // Limite de tamanho do retorno para evitar payloads abusivos
     if (jsonLimpo.length > 2_000_000) {
@@ -163,6 +171,7 @@ Regras para imagens:
     try {
       questoes = JSON.parse(jsonLimpo)
     } catch {
+      console.error('Falha ao parsear JSON do Claude. Início da resposta:', texto.slice(0, 300))
       return NextResponse.json({ error: 'Resposta da IA inválida.' }, { status: 502 })
     }
 
